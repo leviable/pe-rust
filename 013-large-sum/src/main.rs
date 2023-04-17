@@ -23,8 +23,8 @@ impl Total {
         let max_len = self.num.len().max(add_num.len());
         let v1 = self
             .num
-            .clone()
-            .into_iter()
+            .iter()
+            .copied()
             .chain(std::iter::repeat('0'))
             .take(max_len);
 
@@ -34,19 +34,21 @@ impl Total {
             .chain(std::iter::repeat('0'))
             .take(max_len);
 
-        self.num = vec![];
+        let mut new_num = vec![];
         let mut recip = 0;
 
         for (a, b) in v1.zip(v2) {
             let sum = a.to_digit(10).unwrap() + b.to_digit(10).unwrap() + recip;
-            self.num.push(char::from_digit(sum % 10, 10).unwrap());
+            new_num.push(char::from_digit(sum % 10, 10).unwrap());
             recip = sum / 10;
         }
 
         while recip > 0 {
-            self.num.push(char::from_digit(recip % 10, 10).unwrap());
-            recip = recip / 10;
+            new_num.push(char::from_digit(recip % 10, 10).unwrap());
+            recip /= 10;
         }
+
+        self.num = new_num
     }
 }
 
@@ -60,7 +62,7 @@ fn main() {
     println!("Total is {}", total);
 }
 
-const NUMS: &'static [&'static str] = &[
+const NUMS: &[&str] = &[
     "37107287533902102798797998220837590246510135740250",
     "46376937677490009712648124896970078050417018260538",
     "74324986199524741059474233309513058123726617309629",
