@@ -16,48 +16,53 @@
 // What is the value of the first triangle number to have over five hundred divisors?
 
 fn main() {
-    let mut x = 0;
-    let mut current_max = 0;
+    let mut idx = 1;
+    let mut current_max = 1;
+    // let mut triangle_num = 1;
+    let (mut triangle_num, mut factors) = get_factors(idx, 1);
     loop {
-        x += 1;
+        idx += 1;
 
-        let f = get_factors(x);
+        (triangle_num, factors) = get_factors(idx, triangle_num);
 
-        if f.1.len() > current_max {
-            current_max = f.1.len();
-            // println!("New current max: {} at {} for {:?}", f.0, current_max, f.1);
-            println!("New current max: {} at {}", f.0, current_max);
+        if idx % 100 == 0 {
+            println!("working on idx: {} - {}", idx, triangle_num);
         }
-        if x % 100 == 0 {
-            println!("working on {}", x);
+        if factors.len() > current_max {
+            current_max = factors.len();
+            println!("New current max: {} at {}", triangle_num, current_max);
         }
-        if f.1.len() > 500 {
-            println!("Found it: {} - {:?}", f.0, f.1);
+        if factors.len() > 500 {
+            println!("Found it: {} - {:?}", triangle_num, factors);
             break;
         }
+
+        // if idx > 100 {
+        //     break;
+        // }
     }
 }
 
-fn get_factors(num: u64) -> (u64, Vec<u64>) {
+fn get_factors(i: u64, last_triangle_num: u64) -> (u64, Vec<u64>) {
     let mut v = vec![1_u64];
 
-    if num <= 1_u64 {
+    if i == 1 {
         return (1, v);
     }
 
-    let mut triangle_num = 1;
-    for i in 2..=num {
-        triangle_num += i;
-    }
+    let triangle_num = last_triangle_num + i;
+    // println!("1111111111111111111111111111111");
+    // println!("last t num {}", last_triangle_num);
+    // println!("new  t num {}", triangle_num);
+    // println!("1111111111111111111111111111111");
 
-    // Should be able to memoize here maybe? Or going backwards?
-    // for i in 2_u64..=(triangle_num as f64).sqrt() as u64 {
-    for i in 2_u64..=((triangle_num as f64) / 2.0) as u64 {
-        if triangle_num % i == 0_u64 {
-            v.push(i);
+    for idx in 2_u64..=((triangle_num as f64) / 2.0) as u64 {
+        if triangle_num % idx == 0_u64 {
+            v.push(idx);
         }
     }
     v.push(triangle_num);
+
     (triangle_num, v)
 }
 
