@@ -33,11 +33,10 @@ impl Two {
     }
 
     fn summed(&self) -> String {
-        let mut sum = 0;
-        for num in &self.num {
-            sum += num;
-        }
-        sum.to_string()
+        self.num
+            .iter()
+            .fold(0, |sum, digit| sum + digit)
+            .to_string()
     }
 }
 
