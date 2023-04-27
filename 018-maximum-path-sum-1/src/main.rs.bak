@@ -1,0 +1,162 @@
+// By starting at the top of the triangle below and moving to adjacent numbers on the row below, the maximum total from top to bottom is 23.
+
+// 3
+// 7 4
+// 2 4 6
+// 8 5 9 3
+
+// That is, 3 + 7 + 4 + 9 = 23.
+
+// Find the maximum total from top to bottom of the triangle below:
+
+// 75
+// 95 64
+// 17 47 82
+// 18 35 87 10
+// 20 04 82 47 65
+// 19 01 23 75 03 34
+// 88 02 77 73 07 63 67
+// 99 65 04 28 06 16 70 92
+// 41 41 26 56 83 40 80 70 33
+// 41 48 72 33 47 32 37 16 94 29
+// 53 71 44 65 25 43 91 52 97 51 14
+// 70 11 33 28 77 73 17 78 39 68 17 57
+// 91 71 52 38 17 14 91 43 58 50 27 29 48
+// 63 66 04 68 89 53 67 30 73 16 69 87 40 31
+// 04 62 98 27 23 09 70 98 73 93 38 53 60 04 23
+
+static TEST_PYRAMID: &[&str] = &["3", "7 4", "2 4 6", "8 5 9 3"];
+
+#[derive(Debug, Clone)]
+struct Pyramid {
+    rows: Vec<Row>,
+}
+
+#[derive(Debug, Clone)]
+struct Row {
+    cols: Vec<Col>,
+}
+
+#[derive(Debug, Clone)]
+struct Col {
+    col: usize,
+}
+
+impl Pyramid {
+    fn new(p: &[&str]) -> Self {
+        let mut rows: Vec<Row> = vec![];
+        for row in p {
+            rows.push(Row::new(row));
+        }
+
+        Self { rows: rows }
+    }
+
+    fn next(&self, rows: Vec<Row>) -> Self {
+        let mut new = Self {
+            rows: self.rows.clone()[1..].to_vec(),
+        };
+
+        new
+    }
+}
+
+impl PartialEq for Pyramid {
+    fn eq(&self, other: &Self) -> bool {
+        self.rows == other.rows
+    }
+}
+
+impl Row {
+    fn new(row: &str) -> Self {
+        let mut cols: Vec<Col> = vec![];
+        for col in row.split(" ") {
+            cols.push(Col::new(col));
+        }
+
+        Self { cols: cols }
+    }
+}
+
+impl PartialEq for Row {
+    fn eq(&self, other: &Self) -> bool {
+        self.cols == other.cols
+    }
+}
+
+impl Col {
+    fn new(col: &str) -> Self {
+        Self {
+            col: col.parse().unwrap(),
+        }
+    }
+}
+
+impl PartialEq for Col {
+    fn eq(&self, other: &Self) -> bool {
+        self.col == other.col
+    }
+}
+
+#[test]
+fn test_new_pyramid() {
+    assert_eq!(
+        Pyramid::new(&["0"]),
+        Pyramid {
+            rows: vec![Row {
+                cols: vec![Col { col: 0 }]
+            }]
+        }
+    );
+}
+
+fn max_path(pyramid: Pyramid, index: isize) -> Vec<usize> {
+    // For recursion, check to see if this is the last row,
+    //  - If the last row, return the single value
+    //  - If not the last row, recursevly fetch the two options and choose the biggest
+
+    // Check to see if this is the first iteration by looking at index value (-1)
+    if index == -1 {
+        let mut total: Vec<Vec<usize>> = vec![];
+        for (first_index, first_num) in pyramid.rows[0].iter().enumerate() {
+            // Need to get the previous two biggest parts
+            // let comp_vec: Vec<Vec<usize>> = match first_num {
+            //     0 => foo,
+            //     first_k
+            // };
+
+            total.push(max_path(pyramid.next(), first_index as isize));
+        }
+    } else {
+        for (row_index, row) in pyramid.iter().rev().enumerate() {
+            for (col_index, col) in row.iter().enumerate() {
+                println!("{} {}", index, col);
+            }
+        }
+    }
+    vec![]
+}
+
+#[test]
+fn test_max_path() {
+    let pyr = convert_pyramid(TEST_PYRAMID);
+    assert_eq!(max_path(pyr, -1), vec![3, 7, 4, 9]);
+}
+
+fn convert_pyramid(pyramid: &[&str]) -> Vec<Vec<usize>> {
+    let mut new_pyr: Vec<Vec<usize>> = vec![];
+    for row in pyramid {
+        new_pyr.push(row.split(" ").map(|x| x.parse().unwrap()).collect());
+    }
+    new_pyr
+}
+
+#[test]
+fn test_convert_pyramid() {
+    let expected: Vec<Vec<usize>> = vec![vec![3], vec![7, 4], vec![2, 4, 6], vec![8, 5, 9, 3]];
+    assert_eq!(convert_pyramid(TEST_PYRAMID), expected);
+}
+
+fn main() {
+    println!("Hello, world!");
+}
