@@ -13,12 +13,17 @@
 use std::collections::HashSet;
 use std::time::Instant;
 
+use num_bigint::{BigUint, ToBigUint};
+
 fn get_distinct_terms(a_max: u64, b_max: u64) -> usize {
-    let mut set: HashSet<u64> = HashSet::new();
+    let mut set: HashSet<BigUint> = HashSet::new();
     let mut ans;
+    let mut a_big;
     for a in 2..=a_max {
         for b in 2..=b_max {
-            ans = a.pow(b as u32);
+            a_big = a.to_biguint().unwrap();
+
+            ans = a_big.pow(b as u32);
             set.insert(ans);
         }
     }
