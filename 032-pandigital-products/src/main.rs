@@ -11,6 +11,8 @@
 // HINT: Some products can be obtained in more than one way so be sure to only
 // include it once in your sum.
 
+use itertools::Itertools;
+use std::collections::HashSet;
 use std::time::Instant;
 
 fn is_pandigital(num: usize) -> bool {
@@ -41,34 +43,59 @@ fn test_are_pandigital() {
     assert_eq!(are_pandigital(13, 24, 65), true);
 }
 
-fn is_too_large(num1: usize, num2: usize, num3: usize) -> bool {
-    let num3_size = num1.to_string().len() + num2.to_string().len();
+fn check_perm(perm: Vec<&usize>) -> Vec<usize> {
+    let mut solutions: Vec<usize> = vec![];
 
-    num3 >= 9 * num3_size
+    for left_idx in 1..5 {
+        for right_idx in 1..5 {
+            let left: &usize = &perm[0..left_idx]
+                .iter()
+                .map(|x| x.to_string())
+                .collect::<Vec<_>>()
+                .join("")
+                .parse()
+                .unwrap();
+
+            let right: &usize = &perm[left_idx..(left_idx + right_idx)]
+                .iter()
+                .map(|x| x.to_string())
+                .collect::<Vec<_>>()
+                .join("")
+                .parse()
+                .unwrap();
+            let prod: &usize = &perm[(left_idx + right_idx)..]
+                .iter()
+                .map(|x| x.to_string())
+                .collect::<Vec<_>>()
+                .join("")
+                .parse()
+                .unwrap();
+
+            if left * right == *prod && are_pandigital(*left, *right, *prod) {
+                solutions.push(*prod);
+            }
+        }
+    }
+
+    solutions
 }
 
-#[test]
-fn test_is_too_large() {
-    assert_eq!(is_too_large(1, 2, 3), false);
-    assert_eq!(is_too_large(98, 7, 686), true);
+fn p32() -> usize {
+    let possible_nums = vec![1, 2, 3, 4, 5, 6, 7, 8, 9];
+    let mut set: HashSet<usize> = HashSet::new();
+
+    for perm in possible_nums.iter().permutations(9) {
+        for solution in check_perm(perm) {
+            set.insert(solution);
+        }
+    }
+
+    set.iter().sum()
 }
 
 fn main() {
     let start = Instant::now();
-    let mut total = 0;
-    'outer: for a in 1.. {
-        println!("111111111111111111111111111 {a}");
-        for b in 1.. {
-            println!("2222222222222222222222222222 {b}");
-            let c = a * b;
-            if is_too_large(a, b, c) {
-                continue 'outer;
-            } else if are_pandigital(a, b, c) {
-                println!("Found one: {a} * {b} = {c}");
-                total += c;
-            }
-        }
-    }
-    println!("Sum of products: {total}");
+    let solution = p32();
+    println!("Sum of products: {solution}");
     println!("Elapsed Time: {}", start.elapsed().as_secs_f64());
 }
