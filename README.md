@@ -14,3 +14,4 @@ Solution VLOGs:
 [Problem 38](https://youtu.be/wb74kwaR-fY)  
 [Problem 39](https://youtu.be/YZGh0MZNSHo)  
 [Problem 40](https://youtu.be/iDaDu1hgmCs)  
+[Problem 41](https://youtu.be/uv0HTiKRY9Y)  
