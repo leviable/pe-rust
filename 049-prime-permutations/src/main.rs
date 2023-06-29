@@ -9,112 +9,60 @@
 // What 12-digit number do you form by concatenating the three terms in this sequence?
 
 use itertools::Itertools;
-use primes::{is_prime, PrimeSet, Sieve};
-use std::collections::HashSet;
 use std::time::Instant;
 
-fn get_permutations(num: u64) -> Vec<u64> {
-    num.to_string()
-        .chars()
-        .permutations(4)
-        .collect::<Vec<_>>()
-        .iter()
-        .map(|x| x.iter().collect::<String>().parse().unwrap())
-        .filter(|y| is_prime(*y))
+fn get_perms(prime: u64) -> Vec<u64> {
+    // Cast to string,
+    // split chars
+    // collect?
+    // do perms on char vec
+    // collect
+    // for each, recombine into uint
+    prime
+        .to_string()
+        .split("")
+        .permutations(3)
+        .unique()
+        .map(|x| x.join("").parse::<u64>().unwrap())
         .collect::<Vec<u64>>()
 }
 
 #[test]
-fn test_get_permutations() {
-    let expect = vec![1487, 1847, 4817, 4871, 8147, 8741, 7481, 7841];
-    assert_eq!(get_permutations(1487), expect);
-}
-
-fn recurse(input: Vec<u64>) -> Option<Vec<u64>> {
-    if input.len() < 3 {
-        return None;
-    }
-    let (first, mid, last) = (
-        input[0],
-        &input[1..(input.len() - 1)],
-        input[input.len() - 1],
+fn test_foo() {
+    println!("111111111111111111111111111111111111111");
+    println!(
+        "{:?}",
+        123.to_string()
+            .chars()
+            .permutations(3)
+            .collect::<Vec<_>>()
+            .iter() // .map(|x| x.parse())
+            .map(|x| x.into_iter().collect::<String>())
+            .collect::<Vec<_>>()
+            .iter()
+            .map(|y| y.parse::<u64>().unwrap())
+            .collect::<Vec<u64>>()
     );
-    if first > 999 {
-        for val in mid {
-            if last - val == val - first && last != *val && first != *val {
-                // Found one!
-                return Some(vec![first, *val, last]);
-            }
-        }
-    }
-
-    recurse(input[..input.len() - 1].to_vec())
-}
-// Some(vec![1488, 4817, 8147])
-
-#[test]
-fn test_recurse() {
-    assert_eq!(recurse(vec!(1, 2)), None);
-    let mut input = vec![1487, 1847, 4817, 4871, 8147, 8741, 7481, 7841];
-    input.sort();
-    assert_eq!(recurse(input), Some(vec![1487, 4817, 8147]));
-}
-
-fn has_property(num: u64) -> Option<Vec<u64>> {
-    let mut found: Vec<u64> = vec![];
-    for perm in get_permutations(num) {
-        if !is_prime(perm) {
-            continue;
-        }
-        if perm > 1000 {
-            found.push(perm);
-        }
-    }
-
-    let mut h: HashSet<u64> = HashSet::new();
-
-    for x in &found {
-        h.insert(*x);
-    }
-
-    let mut found: Vec<u64> = h.into_iter().collect();
-
-    found.sort();
-
-    if found.len() < 3 {
-        return None;
-    }
-
-    // println!("1111111111111111111111111111111111111111");
-    // println!("{:?}", &found);
-
-    recurse(found)
+    println!("111111111111111111111111111111111111111");
+    assert_eq!(1, 2);
 }
 
 #[test]
-fn test_has_property() {
-    assert_eq!(has_property(1489), None);
-    assert_eq!(has_property(1487), Some(vec![1487, 4817, 8147]));
-}
-fn pe049() -> Vec<u64> {
-    let h: HashSet<u64> = HashSet::new();
-    for num in Sieve::new().iter() {
-        if num < 1_000 {
-            continue;
-        } else if num > 9_999 {
-            break;
-        }
-
-        match has_property(num) {
-            Some(x) => {
-                println!("4444444444444444444444444444444444444444444444");
-                println!("Found one: {:?}", x);
-                println!("4444444444444444444444444444444444444444444444");
-            }
-            None => continue,
-        }
+fn test_bar() {
+    let items = vec![0, 0, 1, 2];
+    for perm in items.iter().permutations(items.len()).unique() {
+        println!("{:?}", perm);
     }
-    vec![]
+    assert_eq!(1, 2);
+}
+
+#[test]
+fn test_get_perms() {
+    assert_eq!(get_perms(123), vec![123, 132, 213, 231, 312, 321]);
+}
+
+fn pe049() -> u64 {
+    0
 }
 
 fn main() {
