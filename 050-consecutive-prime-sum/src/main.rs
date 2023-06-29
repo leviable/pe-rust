@@ -12,32 +12,48 @@
 use primes::{is_prime, PrimeSet, Sieve};
 use std::time::Instant;
 
-fn find_largest(limit: u64) -> u64 {
-    let mut largest = 0;
+fn find_longest(skip: usize, limit: u64) -> Option<u64> {
+    let mut longest = 0;
     let mut sum = 0;
-    for (idx, prime) in Sieve::new().iter().enumerate() {
-        sum += prime;
-        println!("Now working on: #{idx} {prime} {largest} {sum}");
-        if sum >= limit {
-            println!("Sum {sum} is >= limit {limit}");
-            break;
-        }
-        if is_prime(sum) && sum > largest {
-            println!("Sum {sum} is > {largest}");
-            largest = sum
-        }
+
+    if skip % 1000 == 0 {
+        println!("Passing {skip}");
     }
 
-    largest
+    for (idx, prime) in Sieve::new().iter().enumerate() {
+        if idx > 200_000 || skip >= limit.try_into().unwrap() {
+            return Some(0);
+        }
+        if idx < skip {
+            continue;
+        }
+        sum += prime;
+        if sum >= limit {
+            break;
+        }
+        if is_prime(sum) && idx - skip + 1 > longest {
+            // println!("Sum {sum} Prime {prime} Idx {}", idx - skip + 1);
+            longest = idx - skip + 1;
+        }
+    }
+    let next_longest = find_longest(skip + 1, limit);
+    if next_longest < Some(longest.try_into().unwrap()) {
+        Some(longest.try_into().unwrap())
+    } else {
+        next_longest
+    }
 }
 
 #[test]
 fn test_find_largest_under() {
-    assert_eq!(find_largest(100), 41);
-    assert_eq!(find_largest(1000), 953);
+    assert_eq!(find_longest(0, 100), Some(6));
+    assert_eq!(find_longest(0, 1000), Some(21));
+    panic!("121111111111111111111");
 }
 
 fn main() {
     let start = Instant::now();
+    let solution = find_longest(0, 1_000_000);
+    println!("Solution: {}", solution.unwrap());
     println!("Time elapsed: {}", start.elapsed().as_secs_f64());
 }
