@@ -9,59 +9,88 @@
 // What 12-digit number do you form by concatenating the three terms in this sequence?
 
 use itertools::Itertools;
+use primes::{is_prime, PrimeSet, Sieve};
+use std::collections::HashSet;
 use std::time::Instant;
 
-fn get_perms(prime: u64) -> Vec<u64> {
-    // Cast to string,
-    // split chars
-    // collect?
-    // do perms on char vec
-    // collect
-    // for each, recombine into uint
+fn get_perms(prime: u64, perm_cnt: usize) -> Vec<u64> {
+    // println!("About to calculate perms for {prime}");
     prime
         .to_string()
-        .split("")
-        .permutations(3)
+        .chars()
+        .permutations(perm_cnt)
         .unique()
-        .map(|x| x.join("").parse::<u64>().unwrap())
+        .collect::<Vec<_>>()
+        .iter()
+        .map(|x| x.iter().collect::<String>().parse::<u64>().unwrap())
         .collect::<Vec<u64>>()
 }
 
-#[test]
-fn test_foo() {
-    println!("111111111111111111111111111111111111111");
-    println!(
-        "{:?}",
-        123.to_string()
-            .chars()
-            .permutations(3)
-            .collect::<Vec<_>>()
-            .iter() // .map(|x| x.parse())
-            .map(|x| x.into_iter().collect::<String>())
-            .collect::<Vec<_>>()
-            .iter()
-            .map(|y| y.parse::<u64>().unwrap())
-            .collect::<Vec<u64>>()
-    );
-    println!("111111111111111111111111111111111111111");
-    assert_eq!(1, 2);
-}
-
-#[test]
-fn test_bar() {
-    let items = vec![0, 0, 1, 2];
-    for perm in items.iter().permutations(items.len()).unique() {
-        println!("{:?}", perm);
+fn filter_perms(perms: Vec<u64>) -> Vec<u64> {
+    let mut filtered = vec![];
+    for p in perms {
+        if is_prime(p) && p > 1_000 && p < 10_000 {
+            filtered.push(p)
+        }
     }
-    assert_eq!(1, 2);
+
+    filtered.sort();
+    match filtered.len() {
+        0..=2 => vec![],
+        _ => filtered,
+    }
 }
 
 #[test]
 fn test_get_perms() {
-    assert_eq!(get_perms(123), vec![123, 132, 213, 231, 312, 321]);
+    assert_eq!(get_perms(123, 3), vec![123, 132, 213, 231, 312, 321]);
+}
+
+fn has_property(candidates: &Vec<u64>) -> Option<Vec<u64>> {
+    if candidates.len() < 2 {
+        return None;
+    }
+    let first = candidates[0];
+    for candidate in &candidates[1..] {
+        let test_val = candidate + (candidate - &first);
+        if candidates.contains(&test_val) {
+            return Some(candidates.clone());
+        }
+    }
+    return has_property(&candidates[1..].to_vec());
 }
 
 fn pe049() -> u64 {
+    let mut h: HashSet<u64> = HashSet::new();
+    let mut candidates: Vec<Vec<u64>> = vec![];
+    for p in Sieve::new().iter().take(2000) {
+        if p < 999 {
+            continue;
+        } else if p > 9_999 {
+            break;
+        }
+
+        if h.contains(&p) {
+            continue;
+        }
+        let perms = get_perms(p, 4);
+        let filtered = filter_perms(perms);
+        for f_perm in &filtered {
+            h.insert(*f_perm);
+        }
+        if &filtered.len() < &3 {
+            continue;
+        }
+        candidates.push(filtered);
+    }
+
+    for c in candidates {
+        if let Some(found_one) = has_property(&c) {
+            println!("33333333333333333333333333333333333333333333333333");
+            println!("Found one: {:?}", found_one);
+            println!("33333333333333333333333333333333333333333333333333");
+        }
+    }
     0
 }
 
