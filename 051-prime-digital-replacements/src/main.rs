@@ -11,6 +11,7 @@
 // adjacent digits) with the same digit, is part of an eight prime value family.
 
 use primes::{is_prime, PrimeSet, Sieve};
+use std::collections::HashSet;
 use std::time::Instant;
 
 fn permutations(num_str: String) -> Vec<u64> {
@@ -104,13 +105,30 @@ fn test_masks() {
 }
 
 fn pe051() -> u64 {
+    let mut hm: HashSet<u64> = HashSet::new();
     // Get a prime iterator
-    // Count number of digits,
-    // What is a good way to do permutations of the mask?
+    for prime in Sieve::new().iter() {
+        if prime < 10 {
+            continue;
+        }
+        if hm.contains(&prime) {
+            continue;
+        }
+        for prime_mask in masks(prime) {
+            let perms = permutations(prime_mask.clone());
+            if perms.len() >= 8 {
+                return perms[0];
+            }
+            for p in perms.iter() {
+                hm.insert(*p);
+            }
+        }
+    }
     0
 }
 
 fn main() {
     let start = Instant::now();
+    println!("Solution: {}", pe051());
     println!("Time Elapsed: {}", start.elapsed().as_secs_f64());
 }
