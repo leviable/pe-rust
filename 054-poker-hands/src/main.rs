@@ -50,11 +50,13 @@
 //
 // How many hands does Player 1 win?
 
+use std::cmp::Ordering;
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader};
 use std::time::Instant;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Hash, Clone, Eq, PartialEq, Ord, PartialOrd)]
 enum Suit {
     Heart,
     Diamond,
@@ -74,7 +76,7 @@ impl Suit {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Hash, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
 enum CardValue {
     Two = 2,
     Three,
@@ -112,9 +114,9 @@ impl CardValue {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Hash, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
 enum HandType {
-    HighCard,
+    HighCard = 1,
     OnePair,
     TwoPairs,
     ThreeOfAKind,
@@ -128,11 +130,246 @@ enum HandType {
 
 impl HandType {
     fn new(cards: Vec<Card>) -> HandType {
-        HandType::HighCard
+        if royal_flush(&cards) {
+            Self::RoyalFlush
+        } else if straight(&cards) && flush(&cards) {
+            Self::StraightFlush
+        } else if four_of_a_kind(&cards) {
+            Self::FourOfAKind
+        } else if full_house(&cards) {
+            Self::FullHouse
+        } else if flush(&cards) {
+            Self::Flush
+        } else if straight(&cards) {
+            Self::Straight
+        } else if three_of_a_kind(&cards) {
+            Self::ThreeOfAKind
+        } else if two_pairs(&cards) {
+            Self::TwoPairs
+        } else if one_pair(&cards) {
+            Self::OnePair
+        } else {
+            Self::HighCard
+        }
     }
 }
 
-#[derive(Debug, Clone)]
+// Royal Flush: Ten, Jack, Queen, King, Ace, in same suit.
+fn royal_flush(cards: &[Card]) -> bool {
+    straight(cards) && flush(cards) && cards.iter().any(|x| x.value == CardValue::Ace)
+}
+
+#[test]
+fn test_royal_flush() {
+    assert_eq!(
+        royal_flush(&Hand::new(&vec!["TD", "JD", "QD", "KD", "AD"]).cards),
+        true
+    );
+    assert_eq!(
+        royal_flush(&Hand::new(&vec!["9D", "JD", "QD", "KD", "AD"]).cards),
+        false
+    );
+    assert_eq!(
+        royal_flush(&Hand::new(&vec!["TC", "JD", "QD", "KD", "AD"]).cards),
+        false
+    );
+}
+
+// Straight: All cards are consecutive values.
+fn straight(cards: &[Card]) -> bool {
+    let mut state = cards[0].value as i32;
+    for card in &cards[1..] {
+        if card.value as i32 != state + 1 {
+            return false;
+        }
+        state = card.value as i32;
+    }
+
+    true
+}
+
+#[test]
+fn test_straight() {
+    assert_eq!(
+        straight(&Hand::new(&vec!["TC", "JD", "QD", "KD", "AD"]).cards),
+        true
+    );
+    assert_eq!(
+        straight(&Hand::new(&vec!["9D", "JD", "QD", "KD", "AD"]).cards),
+        false
+    );
+}
+
+// Flush: All cards of the same suit.
+fn flush(cards: &[Card]) -> bool {
+    let initial_state = &cards[0].suit;
+
+    cards.iter().all(|x| x.suit == *initial_state)
+}
+
+#[test]
+fn test_flush() {
+    assert_eq!(
+        flush(&Hand::new(&vec!["2D", "4D", "QD", "8D", "AD"]).cards),
+        true
+    );
+    assert_eq!(
+        flush(&Hand::new(&vec!["TC", "JD", "QD", "KD", "AD"]).cards),
+        false
+    );
+}
+
+// Four of a Kind: Four cards of the same value.
+fn four_of_a_kind(cards: &Vec<Card>) -> bool {
+    let mut hm: HashMap<CardValue, i32> = HashMap::new();
+    for card in cards {
+        let count = hm.entry(card.value).or_insert(0);
+        *count += 1
+    }
+    for (_, v) in hm {
+        if v == 4 {
+            return true;
+        }
+    }
+    false
+}
+
+#[test]
+fn test_four_of_a_kind() {
+    assert_eq!(
+        four_of_a_kind(&Hand::new(&vec!["2D", "2C", "2H", "2H", "AD"]).cards),
+        true
+    );
+    assert_eq!(
+        four_of_a_kind(&Hand::new(&vec!["2C", "2D", "2C", "KD", "AD"]).cards),
+        false
+    );
+}
+
+// Full House: Three of a kind and a pair.
+fn full_house(cards: &Vec<Card>) -> bool {
+    let mut hm: HashMap<CardValue, i32> = HashMap::new();
+    for card in cards {
+        let count = hm.entry(card.value).or_insert(0);
+        *count += 1
+    }
+    let mut found_three = false;
+    let mut found_two = false;
+    for (_, v) in hm {
+        match v {
+            2 => found_two = true,
+            3 => found_three = true,
+            _ => (),
+        }
+    }
+
+    found_three && found_two
+}
+
+#[test]
+fn test_full_house() {
+    assert_eq!(
+        full_house(&Hand::new(&vec!["2D", "2C", "3D", "3C", "3H"]).cards),
+        true
+    );
+    assert_eq!(
+        full_house(&Hand::new(&vec!["2D", "4C", "3D", "3C", "3H"]).cards),
+        false
+    );
+    assert_eq!(
+        full_house(&Hand::new(&vec!["2D", "2C", "4D", "3C", "3H"]).cards),
+        false
+    );
+}
+
+// Three of a Kind: Three cards of the same value.
+fn three_of_a_kind(cards: &Vec<Card>) -> bool {
+    let mut hm: HashMap<CardValue, i32> = HashMap::new();
+    for card in cards {
+        let count = hm.entry(card.value).or_insert(0);
+        *count += 1
+    }
+    let mut found_three = false;
+    for (_, v) in hm {
+        if v == 3 {
+            found_three = true;
+        }
+    }
+
+    found_three
+}
+
+#[test]
+fn test_three_of_a_kind() {
+    assert_eq!(
+        three_of_a_kind(&Hand::new(&vec!["2D", "3C", "2H", "8D", "2C"]).cards),
+        true
+    );
+    assert_eq!(
+        three_of_a_kind(&Hand::new(&vec!["2D", "4C", "3D", "3C", "9H"]).cards),
+        false
+    );
+}
+
+// Two Pairs: Two different pairs.
+fn two_pairs(cards: &Vec<Card>) -> bool {
+    let mut hm: HashMap<CardValue, i32> = HashMap::new();
+    for card in cards {
+        let count = hm.entry(card.value).or_insert(0);
+        *count += 1
+    }
+    let mut found_two = 0;
+    for (_, v) in hm {
+        if v == 2 {
+            found_two += 1;
+        }
+    }
+
+    found_two == 2
+}
+
+#[test]
+fn test_two_pair() {
+    assert_eq!(
+        two_pairs(&Hand::new(&vec!["2D", "2C", "3H", "3D", "8C"]).cards),
+        true
+    );
+    assert_eq!(
+        two_pairs(&Hand::new(&vec!["2D", "2C", "3H", "3D", "3C"]).cards),
+        false
+    );
+}
+
+// One Pair: Two cards of the same value.
+fn one_pair(cards: &Vec<Card>) -> bool {
+    let mut hm: HashMap<CardValue, i32> = HashMap::new();
+    for card in cards {
+        let count = hm.entry(card.value).or_insert(0);
+        *count += 1
+    }
+    let mut found_one = 0;
+    for (_, v) in hm {
+        if v == 2 {
+            found_one += 1;
+        }
+    }
+
+    found_one == 1
+}
+
+#[test]
+fn test_one_pair() {
+    assert_eq!(
+        one_pair(&Hand::new(&vec!["2D", "2C", "4H", "3D", "8C"]).cards),
+        true
+    );
+    assert_eq!(
+        one_pair(&Hand::new(&vec!["2D", "2C", "2H", "3C", "9H"]).cards),
+        false
+    );
+}
+
+#[derive(Debug, Clone, Ord, Eq, PartialEq, PartialOrd)]
 struct Card {
     suit: Suit,
     value: CardValue,
@@ -154,11 +391,12 @@ pub struct Hand {
 }
 
 impl Hand {
-    pub fn new(raw_cards: &Vec<&str>) -> Self {
-        let cards = raw_cards
+    pub fn new(raw_cards: &[&str]) -> Self {
+        let mut cards = raw_cards
             .iter()
             .map(|x| Card::new(x))
             .collect::<Vec<Card>>();
+        cards.sort_by(|c1, c2| (c1).value.cmp(&c2.value));
         Self {
             cards: cards.clone(),
             hand_type: HandType::new(cards),
@@ -167,7 +405,23 @@ impl Hand {
 }
 
 fn compare(p1: Hand, p2: Hand) -> Winner {
-    Winner::P1
+    println!("0000000000000000000000000000000000000000");
+    println!("Compairing {:?} to {:?}", p1.hand_type, p2.hand_type);
+
+    match p1.hand_type.cmp(&p2.hand_type) {
+        Ordering::Less => {
+            println!("BBBBBBBBBBBBBBBBBBBBBBBBB");
+            Winner::P2
+        }
+        Ordering::Greater => {
+            println!("AAAAAAAAAAAAAAAAAAAAAAAAA");
+            Winner::P1
+        }
+        Ordering::Equal => {
+            println!("CCCCCCCCCCCCCCCCCCCCCCCCC");
+            Winner::P1
+        }
+    }
 }
 
 #[derive(PartialEq, Eq)]
@@ -187,20 +441,19 @@ fn pe054() -> u64 {
         lines.push(line.unwrap());
     }
     let mut p1_wins = 0;
+    let mut _p2_wins = 0;
     for (idx, line) in lines.iter().enumerate() {
         let raw_cards = line.split(' ').collect::<Vec<&str>>();
-        let (p1, p2) = (
-            Hand::new(&raw_cards[..5].to_vec()),
-            Hand::new(&raw_cards[5..].to_vec()),
-        );
+        let (p1, p2) = (Hand::new(&raw_cards[..5]), Hand::new(&raw_cards[5..]));
         println!("11111111111111111111111111111111111111");
         dbg!(&p1);
         dbg!(&p2);
-        if compare(p1, p2) == Winner::P1 {
-            p1_wins += 1;
+        match compare(p1, p2) {
+            Winner::P1 => p1_wins += 1,
+            Winner::P2 => _p2_wins += 1,
         }
 
-        if idx == 0 {
+        if idx == 5 {
             break;
         }
     }
