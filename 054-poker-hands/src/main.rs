@@ -156,48 +156,66 @@ impl HandType {
 }
 
 // Royal Flush: Ten, Jack, Queen, King, Ace, in same suit.
-fn royal_flush(cards: &[Card]) -> bool {
-    straight(cards) && flush(cards) && cards.iter().any(|x| x.value == CardValue::Ace)
+fn royal_flush(cards: &[Card]) -> Option<(i32, )> {
+    // straight(cards) && flush(cards) && cards.iter().any(|x| x.value == CardValue::Ace)
+    // Is a straight, is a flush, and high card is an ace
+    match straight(cards) {
+        None => None,
+        Some(_) => match flush(cards) {
+            None => None,
+            Some(_) => {if cards.iter().any(|x| x.value == CardValue::Ace) {
+                Some((10,))
+            }else {None}}
+
+
+        }
+    }
 }
 
 #[test]
 fn test_royal_flush() {
     assert_eq!(
         royal_flush(&Hand::new(&vec!["TD", "JD", "QD", "KD", "AD"]).cards),
-        true
+        Some((10,))
     );
     assert_eq!(
         royal_flush(&Hand::new(&vec!["9D", "JD", "QD", "KD", "AD"]).cards),
-        false
+        None
     );
     assert_eq!(
         royal_flush(&Hand::new(&vec!["TC", "JD", "QD", "KD", "AD"]).cards),
-        false
+        None
     );
 }
 
 // Straight: All cards are consecutive values.
-fn straight(cards: &[Card]) -> bool {
-    let mut state = cards[0].value as i32;
+fn straight(cards: &[Card]) -> Option<(i32, CardValue)> {
+    let mut state = cards[0].value;
+    let mut is_straight = true;
     for card in &cards[1..] {
-        if card.value as i32 != state + 1 {
-            return false;
+        if card.value as i32 != state as i32 + 1 {
+            is_straight = false;
+            break;
         }
-        state = card.value as i32;
+        state = card.value;
     }
 
-    true
+    if !is_straight {
+        None
+    } else {
+        Some((9, state))
+    }
 }
 
 #[test]
 fn test_straight() {
     assert_eq!(
         straight(&Hand::new(&vec!["TC", "JD", "QD", "KD", "AD"]).cards),
-        true
+        Some((9, CardValue::Ace))
     );
     assert_eq!(
         straight(&Hand::new(&vec!["9D", "JD", "QD", "KD", "AD"]).cards),
-        false
+        None
     );
 }
 
