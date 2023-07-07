@@ -78,6 +78,7 @@ impl Suit {
 
 #[derive(Debug, Hash, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
 enum CardValue {
+    None = 0,
     Two = 2,
     Three,
     Four,
@@ -114,18 +115,18 @@ impl CardValue {
     }
 }
 
-#[derive(Debug, Hash, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Debug, Hash, Clone, Eq, PartialEq, PartialOrd, Ord)]
 enum HandType {
-    HighCard = 1,
-    OnePair,
-    TwoPairs,
-    ThreeOfAKind,
-    Straight,
-    Flush,
-    FullHouse,
-    FourOfAKind,
-    StraightFlush,
-    RoyalFlush,
+    HighCard{rank: i32, high_card: CardValue},
+    OnePair{rank: i32, pair_value: CardValue, high_card: CardValue},
+    TwoPairs{rank: i32, pair_1_value: CardValue, pair_2_value: CardValue, high_card: CardValue},
+    ThreeOfAKind{rank: i32, trip_value:CardValue, high_card: CardValue},
+    Straight{rank: i32, high_card: CardValue},
+    Flush{rank: i32, high_card: CardValue},
+    FullHouse{rank: i32, trip_value: CardValue, pair_value: CardValue},
+    FourOfAKind{rank: i32, quad_value: CardValue, high_card: CardValue},
+    StraightFlush{rank: i32, high_card: CardValue},
+    RoyalFlush{rank: i32 },
 }
 
 impl HandType {
@@ -146,8 +147,8 @@ impl HandType {
             Self::ThreeOfAKind
         } else if two_pairs(&cards) {
             Self::TwoPairs
-        } else if one_pair(&cards) {
-            Self::OnePair
+        } else if let Some(one_pair) = one_pair(&cards) {
+            Self::OnePair{rank: one_pair.0, pair_value.1, high_card.2}
         } else {
             Self::HighCard
         }
@@ -201,53 +202,79 @@ fn test_straight() {
 }
 
 // Flush: All cards of the same suit.
-fn flush(cards: &[Card]) -> bool {
+fn flush(cards: &[Card]) -> Option<(i32, CardValue)>{
     let initial_state = &cards[0].suit;
+    let is_flush = cards.iter().all(|x| x.suit == *initial_state);
+    let high_card = CardValue::None;
+    for card in cards.iter() {
+        if card.value > high_card {
+            high_card = card.value;
+        }
+    }
 
-    cards.iter().all(|x| x.suit == *initial_state)
+    if high_card == CardValue::None {
+        panic!("Expected this to not be none: {:?}", high_card);
+    } else if is_flush {
+        Some((8, high_card))
+    } else {
+        None
+    }
+
 }
 
 #[test]
 fn test_flush() {
     assert_eq!(
         flush(&Hand::new(&vec!["2D", "4D", "QD", "8D", "AD"]).cards),
-        true
+        Some((8, CardValue::Ace))
     );
     assert_eq!(
         flush(&Hand::new(&vec!["TC", "JD", "QD", "KD", "AD"]).cards),
-        false
+        None
     );
 }
 
 // Four of a Kind: Four cards of the same value.
-fn four_of_a_kind(cards: &Vec<Card>) -> bool {
+fn four_of_a_kind(cards: &Vec<Card>) -> Option<(i32, CardValue, CardValue)> {
     let mut hm: HashMap<CardValue, i32> = HashMap::new();
     for card in cards {
         let count = hm.entry(card.value).or_insert(0);
         *count += 1
     }
-    for (_, v) in hm {
+
+    let quad_value = CardValue::None;
+    let high_card = CardValue::None;
+    for (k, v) in hm {
         if v == 4 {
-            return true;
+            quad_value = k;
+        } else if k > high_card {
+            high_card = k;
         }
     }
-    false
+
+    if quad_value == CardValue::None  || high_card == CardValue::None{
+        panic!("Expected these to not be none: {:?} {:?}", quad_value, high_card);
+    } else if quad_value != CardValue::None {
+        Some((7, quad_value, high_card))
+    } else {
+        None
+    }
 }
 
 #[test]
 fn test_four_of_a_kind() {
     assert_eq!(
         four_of_a_kind(&Hand::new(&vec!["2D", "2C", "2H", "2H", "AD"]).cards),
-        true
+        Some((7, CardValue::Three, CardValue::Two))
     );
     assert_eq!(
         four_of_a_kind(&Hand::new(&vec!["2C", "2D", "2C", "KD", "AD"]).cards),
-        false
+        None
     );
 }
 
 // Full House: Three of a kind and a pair.
-fn full_house(cards: &Vec<Card>) -> bool {
+fn full_house(cards: &Vec<Card>) -> Option<(i32, CardValue, CardValue)> {
     let mut hm: HashMap<CardValue, i32> = HashMap::new();
     for card in cards {
         let count = hm.entry(card.value).or_insert(0);
@@ -255,121 +282,169 @@ fn full_house(cards: &Vec<Card>) -> bool {
     }
     let mut found_three = false;
     let mut found_two = false;
-    for (_, v) in hm {
+    let mut trip_value = CardValue::None;
+    let mut pair_value = CardValue::None;
+    for (k, v) in hm {
         match v {
-            2 => found_two = true,
-            3 => found_three = true,
+            2 => pair_value = k,
+            3 => trip_value = k,
             _ => (),
         }
     }
 
-    found_three && found_two
+    if trip_value == CardValue::None  || pair_value == CardValue::None{
+        panic!("Expected these to not be none: {:?} {:?}", trip_value, pair_value);
+    } else if trip_value != CardValue::None && pair_value != CardValue::None {
+        Some((6, trip_value, pair_value))
+    } else {
+        None
+    }
 }
 
 #[test]
 fn test_full_house() {
     assert_eq!(
         full_house(&Hand::new(&vec!["2D", "2C", "3D", "3C", "3H"]).cards),
-        true
+        Some((6, CardValue::Three, CardValue::Two))
     );
     assert_eq!(
         full_house(&Hand::new(&vec!["2D", "4C", "3D", "3C", "3H"]).cards),
-        false
+        None
     );
     assert_eq!(
         full_house(&Hand::new(&vec!["2D", "2C", "4D", "3C", "3H"]).cards),
-        false
+        None
     );
 }
 
 // Three of a Kind: Three cards of the same value.
-fn three_of_a_kind(cards: &Vec<Card>) -> bool {
+fn three_of_a_kind(cards: &Vec<Card>) -> Option<(i32, CardValue, CardValue)> {
     let mut hm: HashMap<CardValue, i32> = HashMap::new();
     for card in cards {
         let count = hm.entry(card.value).or_insert(0);
         *count += 1
     }
     let mut found_three = false;
-    for (_, v) in hm {
+    let mut high_card = CardValue::None;
+    let mut trip_value = CardValue::None;
+    for (k, v) in hm {
         if v == 3 {
             found_three = true;
+            trip_value = k;
+        } else if k > high_card {
+            high_card = k;
         }
     }
 
-    found_three
+    if high_card == CardValue::None || trip_value == CardValue::None {
+        panic!("Expected these to not be none: {:?} {:?}", trip_value, high_card);
+    } else if found_three {
+        Some((5, trip_value, high_card))
+    } else {
+        None
+    }
 }
 
 #[test]
 fn test_three_of_a_kind() {
     assert_eq!(
         three_of_a_kind(&Hand::new(&vec!["2D", "3C", "2H", "8D", "2C"]).cards),
-        true
+        Some((5, CardValue::Two, CardValue::Eight))
     );
     assert_eq!(
         three_of_a_kind(&Hand::new(&vec!["2D", "4C", "3D", "3C", "9H"]).cards),
-        false
+        None
     );
 }
 
 // Two Pairs: Two different pairs.
-fn two_pairs(cards: &Vec<Card>) -> bool {
+fn two_pairs(cards: &Vec<Card>) -> Option<(i32, CardValue, CardValue, CardValue)> {
     let mut hm: HashMap<CardValue, i32> = HashMap::new();
     for card in cards {
         let count = hm.entry(card.value).or_insert(0);
         *count += 1
     }
     let mut found_two = 0;
-    for (_, v) in hm {
+    let mut high_card = CardValue::None;
+    let mut pair_1_value = CardValue::None;
+    let mut pair_2_value = CardValue::None;
+    for (k, v) in hm {
         if v == 2 {
             found_two += 1;
+            if pair_1_value == CardValue::None {
+                pair_1_value = k;
+            } else {
+                pair_2_value = k;
+            }
+        } else {
+            high_card = k;
+
         }
     }
 
-    found_two == 2
+    if high_card == CardValue::None || pair_1_value == CardValue::None || pair_2_value == CardValue::None {
+        panic!("Expected these to not be none: {:?} {:?} {:?}", pair_1_value, pair_2_value, high_card);
+
+    }
+    else if found_two == 2 {
+        Some((3, pair_1_value, pair_2_value, high_card))
+    } else {
+        None
+    }
 }
 
 #[test]
 fn test_two_pair() {
     assert_eq!(
         two_pairs(&Hand::new(&vec!["2D", "2C", "3H", "3D", "8C"]).cards),
-        true
+        Some((3, CardValue::Three, CardValue::Two, CardValue::Eight))
     );
     assert_eq!(
         two_pairs(&Hand::new(&vec!["2D", "2C", "3H", "3D", "3C"]).cards),
-        false
+        None
     );
 }
 
 // One Pair: Two cards of the same value.
-fn one_pair(cards: &Vec<Card>) -> bool {
+fn one_pair(cards: &Vec<Card>) -> Option<(i32, CardValue, CardValue)> {
     let mut hm: HashMap<CardValue, i32> = HashMap::new();
     for card in cards {
         let count = hm.entry(card.value).or_insert(0);
         *count += 1
     }
     let mut found_one = 0;
-    for (_, v) in hm {
+    let mut one_pair_value: CardValue = CardValue::None;
+    let mut high_card: CardValue = CardValue::None;
+    for (k, v) in hm {
         if v == 2 {
             found_one += 1;
+            one_pair_value = k;
         }
     }
 
-    found_one == 1
+    if one_pair_value == CardValue::None || high_card == CardValue::None {
+        panic!("Expected these to not be none: {:?} {:?}", one_pair_value, high_card);
+    }
+    else if found_one == 1 {
+        Some((2, one_pair_value, high_card))
+    } else {
+        None
+    }
 }
 
 #[test]
 fn test_one_pair() {
     assert_eq!(
         one_pair(&Hand::new(&vec!["2D", "2C", "4H", "3D", "8C"]).cards),
-        true
+        Some((2, CardValue::Two, CardValue::Eight))
     );
     assert_eq!(
         one_pair(&Hand::new(&vec!["2D", "2C", "2H", "3C", "9H"]).cards),
-        false
+        None
     );
 }
 
-#[derive(Debug, Clone, Ord, Eq, PartialEq, PartialOrd)]
+#[derive(Debug, Hash, Clone, Ord, Eq, PartialEq, PartialOrd)]
 struct Card {
     suit: Suit,
     value: CardValue,
@@ -388,6 +463,8 @@ impl Card {
 pub struct Hand {
     cards: Vec<Card>,
     hand_type: HandType,
+    high_value: Card,
+    high_card: Card,
 }
 
 impl Hand {
@@ -397,116 +474,21 @@ impl Hand {
             .map(|x| Card::new(x))
             .collect::<Vec<Card>>();
         cards.sort_by(|c1, c2| (c1).value.cmp(&c2.value));
+        let (hand_type, high_value, high_card) = HandType::new(cards)
         Self {
             cards: cards.clone(),
-            hand_type: HandType::new(cards),
+            hand_type: hand_type,
+            high_value: high_value,
+            high_card: high_card,
         }
     }
 }
 
-fn compare(p1: Hand, p2: Hand) -> Winner {
+fn compare(p1: Hand, p2: Hand) -> Option<Winner> {
     println!("0000000000000000000000000000000000000000");
     println!("Compairing {:?} to {:?}", p1.hand_type, p2.hand_type);
 
-    match p1.hand_type.cmp(&p2.hand_type) {
-        Ordering::Greater => {
-            println!("AAAAAAAAAAAAAAAAAAAAAAAAA");
-            Winner::P1
-        }
-        Ordering::Less => {
-            println!("BBBBBBBBBBBBBBBBBBBBBBBBB");
-            Winner::P2
-        }
-        Ordering::Equal => {
-            println!("CCCCCCCCCCCCCCCCCCCCCCCCC");
-            match p1.hand_type {
-                HandType::RoyalFlush => panic!("Not sure what to do with RoyalFlush"),
-                HandType::StraightFlush => panic!("Not sure what to do with StraightFlush"),
-                HandType::Straight => panic!("Not sure what to do with Straight"),
-                HandType::Flush => panic!("Not sure what to do with StraightFlush"),
-                HandType::FourOfAKind => panic!("Not sure what to do with FourOfAKind"),
-                HandType::FullHouse => panic!("Not sure what to do with FullHouse"),
-                HandType::ThreeOfAKind => {
-                    let mut hm: HashMap<CardValue, i32> = HashMap::new();
-                    for card in p1.cards {
-                        let count = hm.entry(card.value).or_insert(0);
-                        *count += 1
-                    }
-                    let mut p1_pair_value = CardValue::Two;
-                    for (k, v) in hm.clone() {
-                        println!("Comparing p1 {:?}", hm.clone());
-                        if v == 3 {
-                            p1_pair_value = k;
-                            break;
-                        }
-                    }
-                    let mut hm: HashMap<CardValue, i32> = HashMap::new();
-                    for card in p2.cards {
-                        let count = hm.entry(card.value).or_insert(0);
-                        *count += 1;
-                    }
-                    let mut p2_pair_value = CardValue::Two;
-                    for (k, v) in hm.clone() {
-                        println!("Comparing p2 {:?}", hm.clone());
-                        if v == 3 {
-                            p2_pair_value = k;
-                            break;
-                        }
-                    }
-                    println!("2222222222222222222222222222222222222222222");
-                    println!("{:?} {:?}", p1_pair_value, p2_pair_value);
-                    match p1_pair_value.cmp(&p2_pair_value) {
-                        Ordering::Greater => Winner::P1,
-                        Ordering::Less => Winner::P2,
-                        Ordering::Equal => panic!("Should never get here"),
-                    }
-                }
-                HandType::TwoPairs => panic!("Not sure what to do with TwoPairs"),
-                HandType::OnePair => {
-                    let mut hm: HashMap<CardValue, i32> = HashMap::new();
-                    for card in p1.cards {
-                        let count = hm.entry(card.value).or_insert(0);
-                        *count += 1
-                    }
-                    let mut p1_pair_value = CardValue::Two;
-                    for (k, v) in hm.clone() {
-                        println!("Comparing p1 {:?}", hm.clone());
-                        if v == 2 {
-                            p1_pair_value = k;
-                            break;
-                        }
-                    }
-                    let mut hm: HashMap<CardValue, i32> = HashMap::new();
-                    for card in p2.cards {
-                        let count = hm.entry(card.value).or_insert(0);
-                        *count += 1;
-                    }
-                    let mut p2_pair_value = CardValue::Two;
-                    for (k, v) in hm.clone() {
-                        println!("Comparing p2 {:?}", hm.clone());
-                        if v == 2 {
-                            p2_pair_value = k;
-                            break;
-                        }
-                    }
-                    println!("2222222222222222222222222222222222222222222");
-                    println!("{:?} {:?}", p1_pair_value, p2_pair_value);
-                    match p1_pair_value.cmp(&p2_pair_value) {
-                        Ordering::Greater => Winner::P1,
-                        Ordering::Less => Winner::P2,
-                        Ordering::Equal => panic!("Should never get here"),
-                    }
-                }
-                HandType::HighCard => {
-                    if p1.cards[4] > p2.cards[4] {
-                        Winner::P1
-                    } else {
-                        Winner::P2
-                    }
-                }
-            }
-        }
-    }
+    None
 }
 
 #[derive(PartialEq, Eq)]
@@ -534,11 +516,12 @@ fn pe054() -> u64 {
         dbg!(&p1);
         dbg!(&p2);
         match compare(p1, p2) {
-            Winner::P1 => p1_wins += 1,
-            Winner::P2 => _p2_wins += 1,
+            Some(Winner::P1) => p1_wins += 1,
+            Some(Winner::P2) => _p2_wins += 1,
+            None => unreachable!("Couldn't deduce winner"),
         }
 
-        if idx == 50 {
+        if idx == 5 {
             break;
         }
     }
