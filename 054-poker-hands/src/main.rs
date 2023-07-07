@@ -117,58 +117,130 @@ impl CardValue {
 
 #[derive(Debug, Hash, Clone, Eq, PartialEq, PartialOrd, Ord)]
 enum HandType {
-    HighCard{rank: i32, high_card: CardValue},
-    OnePair{rank: i32, pair_value: CardValue, high_card: CardValue},
-    TwoPairs{rank: i32, pair_1_value: CardValue, pair_2_value: CardValue, high_card: CardValue},
-    ThreeOfAKind{rank: i32, trip_value:CardValue, high_card: CardValue},
-    Straight{rank: i32, high_card: CardValue},
-    Flush{rank: i32, high_card: CardValue},
-    FullHouse{rank: i32, trip_value: CardValue, pair_value: CardValue},
-    FourOfAKind{rank: i32, quad_value: CardValue, high_card: CardValue},
-    StraightFlush{rank: i32, high_card: CardValue},
-    RoyalFlush{rank: i32 },
+    HighCard {
+        rank: i32,
+        high_card: CardValue,
+    },
+    OnePair {
+        rank: i32,
+        pair_value: CardValue,
+        high_card: CardValue,
+    },
+    TwoPairs {
+        rank: i32,
+        pair_1_value: CardValue,
+        pair_2_value: CardValue,
+        high_card: CardValue,
+    },
+    ThreeOfAKind {
+        rank: i32,
+        trip_value: CardValue,
+        high_card: CardValue,
+    },
+    Straight {
+        rank: i32,
+        high_card: CardValue,
+    },
+    Flush {
+        rank: i32,
+        high_card: CardValue,
+    },
+    FullHouse {
+        rank: i32,
+        trip_value: CardValue,
+        pair_value: CardValue,
+    },
+    FourOfAKind {
+        rank: i32,
+        quad_value: CardValue,
+        high_card: CardValue,
+    },
+    StraightFlush {
+        rank: i32,
+        high_card: CardValue,
+    },
+    RoyalFlush {
+        rank: i32,
+    },
 }
 
 impl HandType {
     fn new(cards: Vec<Card>) -> HandType {
-        if royal_flush(&cards) {
-            Self::RoyalFlush
-        } else if straight(&cards) && flush(&cards) {
-            Self::StraightFlush
-        } else if four_of_a_kind(&cards) {
-            Self::FourOfAKind
-        } else if full_house(&cards) {
-            Self::FullHouse
-        } else if flush(&cards) {
-            Self::Flush
-        } else if straight(&cards) {
-            Self::Straight
-        } else if three_of_a_kind(&cards) {
-            Self::ThreeOfAKind
-        } else if two_pairs(&cards) {
-            Self::TwoPairs
-        } else if let Some(one_pair) = one_pair(&cards) {
-            Self::OnePair{rank: one_pair.0, pair_value.1, high_card.2}
+        if let Some(hand) = royal_flush(&cards) {
+            Self::RoyalFlush { rank: hand.0 }
+        } else if let Some(hand) = straight_flush(&cards) {
+            Self::StraightFlush {
+                rank: hand.0,
+                high_card: hand.1,
+            }
+        } else if let Some(hand) = four_of_a_kind(&cards) {
+            Self::FourOfAKind {
+                rank: hand.0,
+                quad_value: hand.1,
+                high_card: hand.2,
+            }
+        } else if let Some(hand) = full_house(&cards) {
+            Self::FullHouse {
+                rank: hand.0,
+                trip_value: hand.1,
+                pair_value: hand.2,
+            }
+        } else if let Some(hand) = flush(&cards) {
+            Self::Flush {
+                rank: hand.0,
+                high_card: hand.1,
+            }
+        } else if let Some(hand) = straight(&cards) {
+            Self::Straight {
+                rank: hand.0,
+                high_card: hand.1,
+            }
+        } else if let Some(hand) = three_of_a_kind(&cards) {
+            Self::ThreeOfAKind {
+                rank: hand.0,
+                trip_value: hand.1,
+                high_card: hand.2,
+            }
+        } else if let Some(hand) = two_pairs(&cards) {
+            Self::TwoPairs {
+                rank: hand.0,
+                pair_1_value: hand.1,
+                pair_2_value: hand.2,
+                high_card: hand.3,
+            }
+        } else if let Some(hand) = one_pair(&cards) {
+            Self::OnePair {
+                rank: hand.0,
+                pair_value: hand.1,
+                high_card: hand.2,
+            }
+        } else if let Some(hand) = high_card(&cards) {
+            Self::HighCard {
+                rank: hand.0,
+                high_card: hand.1,
+            }
         } else {
-            Self::HighCard
+            panic!("Failed to destructure cards into hand");
         }
     }
 }
 
 // Royal Flush: Ten, Jack, Queen, King, Ace, in same suit.
-fn royal_flush(cards: &[Card]) -> Option<(i32, )> {
+fn royal_flush(cards: &[Card]) -> Option<(i32,)> {
     // straight(cards) && flush(cards) && cards.iter().any(|x| x.value == CardValue::Ace)
     // Is a straight, is a flush, and high card is an ace
     match straight(cards) {
         None => None,
         Some(_) => match flush(cards) {
             None => None,
-            Some(_) => {if cards.iter().any(|x| x.value == CardValue::Ace) {
-                Some((10,))
-            }else {None}}
-
-
-        }
+            Some(_) => {
+                if cards.iter().any(|x| x.value == CardValue::Ace) {
+                    Some((10,))
+                } else {
+                    None
+                }
+            }
+        },
     }
 }
 
@@ -188,6 +260,156 @@ fn test_royal_flush() {
     );
 }
 
+// Straight Flush: All cards are consecutive values of same suit.
+fn straight_flush(cards: &[Card]) -> Option<(i32, CardValue)> {
+    let mut high_card = CardValue::None;
+    match straight(cards) {
+        None => None,
+        Some(_) => match flush(cards) {
+            None => None,
+            Some(_) => {
+                for card in cards {
+                    if card.value == CardValue::Ace {
+                        return None;
+                    } else if card.value > high_card {
+                        high_card = card.value;
+                    }
+                }
+                Some((10, high_card))
+            }
+        },
+    }
+}
+
+#[test]
+fn test_straight_flush() {
+    assert_eq!(
+        straight_flush(&Hand::new(&vec!["9D", "TD", "JD", "QD", "KD"]).cards),
+        Some((10, CardValue::King))
+    );
+    assert_eq!(
+        straight_flush(&Hand::new(&vec!["9D", "JD", "QD", "KD", "AD"]).cards),
+        None
+    );
+    assert_eq!(
+        straight_flush(&Hand::new(&vec!["TC", "JD", "QD", "KD", "AD"]).cards),
+        None
+    );
+}
+
+// Four of a Kind: Four cards of the same value.
+fn four_of_a_kind(cards: &Vec<Card>) -> Option<(i32, CardValue, CardValue)> {
+    let mut hm: HashMap<CardValue, i32> = HashMap::new();
+    for card in cards {
+        let count = hm.entry(card.value).or_insert(0);
+        *count += 1
+    }
+
+    let mut quad_value = CardValue::None;
+    let mut high_card = CardValue::None;
+    for (k, v) in hm {
+        if v == 4 {
+            quad_value = k;
+        } else if k > high_card {
+            high_card = k;
+        }
+    }
+
+    if quad_value == CardValue::None || high_card == CardValue::None {
+        None
+    } else if quad_value != CardValue::None {
+        Some((8, quad_value, high_card))
+    } else {
+        None
+    }
+}
+
+#[test]
+fn test_four_of_a_kind() {
+    assert_eq!(
+        four_of_a_kind(&Hand::new(&vec!["2D", "2C", "2H", "2H", "AD"]).cards),
+        Some((8, CardValue::Two, CardValue::Ace))
+    );
+    assert_eq!(
+        four_of_a_kind(&Hand::new(&vec!["2C", "2D", "2C", "KD", "AD"]).cards),
+        None
+    );
+}
+
+// Full House: Three of a kind and a pair.
+fn full_house(cards: &Vec<Card>) -> Option<(i32, CardValue, CardValue)> {
+    let mut hm: HashMap<CardValue, i32> = HashMap::new();
+    for card in cards {
+        let count = hm.entry(card.value).or_insert(0);
+        *count += 1
+    }
+    let mut trip_value = CardValue::None;
+    let mut pair_value = CardValue::None;
+    for (k, v) in hm {
+        match v {
+            2 => pair_value = k,
+            3 => trip_value = k,
+            _ => (),
+        }
+    }
+
+    if trip_value == CardValue::None || pair_value == CardValue::None {
+        None
+    } else if trip_value != CardValue::None && pair_value != CardValue::None {
+        Some((7, trip_value, pair_value))
+    } else {
+        None
+    }
+}
+
+#[test]
+fn test_full_house() {
+    assert_eq!(
+        full_house(&Hand::new(&vec!["2D", "2C", "3D", "3C", "3H"]).cards),
+        Some((7, CardValue::Three, CardValue::Two))
+    );
+    assert_eq!(
+        full_house(&Hand::new(&vec!["2D", "4C", "3D", "3C", "3H"]).cards),
+        None
+    );
+    assert_eq!(
+        full_house(&Hand::new(&vec!["2D", "2C", "4D", "3C", "3H"]).cards),
+        None
+    );
+}
+
+// Flush: All cards of the same suit.
+fn flush(cards: &[Card]) -> Option<(i32, CardValue)> {
+    let initial_state = &cards[0].suit;
+    let is_flush = cards.iter().all(|x| x.suit == *initial_state);
+    let mut high_card = CardValue::None;
+    for card in cards.iter() {
+        if card.value > high_card {
+            high_card = card.value;
+        }
+    }
+
+    if high_card == CardValue::None {
+        panic!("Expected this to not be none: {:?}", high_card);
+    } else if is_flush {
+        Some((6, high_card))
+    } else {
+        None
+    }
+}
+
+#[test]
+fn test_flush() {
+    assert_eq!(
+        flush(&Hand::new(&vec!["2D", "4D", "QD", "8D", "AD"]).cards),
+        Some((6, CardValue::Ace))
+    );
+    assert_eq!(
+        flush(&Hand::new(&vec!["TC", "JD", "QD", "KD", "AD"]).cards),
+        None
+    );
+}
+
 // Straight: All cards are consecutive values.
 fn straight(cards: &[Card]) -> Option<(i32, CardValue)> {
     let mut state = cards[0].value;
@@ -203,7 +425,7 @@ fn straight(cards: &[Card]) -> Option<(i32, CardValue)> {
     if !is_straight {
         None
     } else {
-        Some((9, state))
+        Some((5, state))
     }
 }
 
@@ -211,126 +433,10 @@ fn straight(cards: &[Card]) -> Option<(i32, CardValue)> {
 fn test_straight() {
     assert_eq!(
         straight(&Hand::new(&vec!["TC", "JD", "QD", "KD", "AD"]).cards),
-        Some((9, CardValue::Ace))
+        Some((5, CardValue::Ace))
     );
     assert_eq!(
         straight(&Hand::new(&vec!["9D", "JD", "QD", "KD", "AD"]).cards),
-        None
-    );
-}
-
-// Flush: All cards of the same suit.
-fn flush(cards: &[Card]) -> Option<(i32, CardValue)>{
-    let initial_state = &cards[0].suit;
-    let is_flush = cards.iter().all(|x| x.suit == *initial_state);
-    let high_card = CardValue::None;
-    for card in cards.iter() {
-        if card.value > high_card {
-            high_card = card.value;
-        }
-    }
-
-    if high_card == CardValue::None {
-        panic!("Expected this to not be none: {:?}", high_card);
-    } else if is_flush {
-        Some((8, high_card))
-    } else {
-        None
-    }
-
-}
-
-#[test]
-fn test_flush() {
-    assert_eq!(
-        flush(&Hand::new(&vec!["2D", "4D", "QD", "8D", "AD"]).cards),
-        Some((8, CardValue::Ace))
-    );
-    assert_eq!(
-        flush(&Hand::new(&vec!["TC", "JD", "QD", "KD", "AD"]).cards),
-        None
-    );
-}
-
-// Four of a Kind: Four cards of the same value.
-fn four_of_a_kind(cards: &Vec<Card>) -> Option<(i32, CardValue, CardValue)> {
-    let mut hm: HashMap<CardValue, i32> = HashMap::new();
-    for card in cards {
-        let count = hm.entry(card.value).or_insert(0);
-        *count += 1
-    }
-
-    let quad_value = CardValue::None;
-    let high_card = CardValue::None;
-    for (k, v) in hm {
-        if v == 4 {
-            quad_value = k;
-        } else if k > high_card {
-            high_card = k;
-        }
-    }
-
-    if quad_value == CardValue::None  || high_card == CardValue::None{
-        panic!("Expected these to not be none: {:?} {:?}", quad_value, high_card);
-    } else if quad_value != CardValue::None {
-        Some((7, quad_value, high_card))
-    } else {
-        None
-    }
-}
-
-#[test]
-fn test_four_of_a_kind() {
-    assert_eq!(
-        four_of_a_kind(&Hand::new(&vec!["2D", "2C", "2H", "2H", "AD"]).cards),
-        Some((7, CardValue::Three, CardValue::Two))
-    );
-    assert_eq!(
-        four_of_a_kind(&Hand::new(&vec!["2C", "2D", "2C", "KD", "AD"]).cards),
-        None
-    );
-}
-
-// Full House: Three of a kind and a pair.
-fn full_house(cards: &Vec<Card>) -> Option<(i32, CardValue, CardValue)> {
-    let mut hm: HashMap<CardValue, i32> = HashMap::new();
-    for card in cards {
-        let count = hm.entry(card.value).or_insert(0);
-        *count += 1
-    }
-    let mut found_three = false;
-    let mut found_two = false;
-    let mut trip_value = CardValue::None;
-    let mut pair_value = CardValue::None;
-    for (k, v) in hm {
-        match v {
-            2 => pair_value = k,
-            3 => trip_value = k,
-            _ => (),
-        }
-    }
-
-    if trip_value == CardValue::None  || pair_value == CardValue::None{
-        panic!("Expected these to not be none: {:?} {:?}", trip_value, pair_value);
-    } else if trip_value != CardValue::None && pair_value != CardValue::None {
-        Some((6, trip_value, pair_value))
-    } else {
-        None
-    }
-}
-
-#[test]
-fn test_full_house() {
-    assert_eq!(
-        full_house(&Hand::new(&vec!["2D", "2C", "3D", "3C", "3H"]).cards),
-        Some((6, CardValue::Three, CardValue::Two))
-    );
-    assert_eq!(
-        full_house(&Hand::new(&vec!["2D", "4C", "3D", "3C", "3H"]).cards),
-        None
-    );
-    assert_eq!(
-        full_house(&Hand::new(&vec!["2D", "2C", "4D", "3C", "3H"]).cards),
         None
     );
 }
@@ -355,9 +461,9 @@ fn three_of_a_kind(cards: &Vec<Card>) -> Option<(i32, CardValue, CardValue)> {
     }
 
     if high_card == CardValue::None || trip_value == CardValue::None {
-        panic!("Expected these to not be none: {:?} {:?}", trip_value, high_card);
+        None
     } else if found_three {
-        Some((5, trip_value, high_card))
+        Some((4, trip_value, high_card))
     } else {
         None
     }
@@ -367,7 +473,7 @@ fn three_of_a_kind(cards: &Vec<Card>) -> Option<(i32, CardValue, CardValue)> {
 fn test_three_of_a_kind() {
     assert_eq!(
         three_of_a_kind(&Hand::new(&vec!["2D", "3C", "2H", "8D", "2C"]).cards),
-        Some((5, CardValue::Two, CardValue::Eight))
+        Some((4, CardValue::Two, CardValue::Eight))
     );
     assert_eq!(
         three_of_a_kind(&Hand::new(&vec!["2D", "4C", "3D", "3C", "9H"]).cards),
@@ -396,16 +502,20 @@ fn two_pairs(cards: &Vec<Card>) -> Option<(i32, CardValue, CardValue, CardValue)
             }
         } else {
             high_card = k;
-
         }
     }
 
-    if high_card == CardValue::None || pair_1_value == CardValue::None || pair_2_value == CardValue::None {
-        panic!("Expected these to not be none: {:?} {:?} {:?}", pair_1_value, pair_2_value, high_card);
-
-    }
-    else if found_two == 2 {
-        Some((3, pair_1_value, pair_2_value, high_card))
+    if high_card == CardValue::None
+        || pair_1_value == CardValue::None
+        || pair_2_value == CardValue::None
+    {
+        None
+    } else if found_two == 2 {
+        if pair_1_value > pair_2_value {
+            Some((3, pair_1_value, pair_2_value, high_card))
+        } else {
+            Some((3, pair_2_value, pair_1_value, high_card))
+        }
     } else {
         None
     }
@@ -437,13 +547,14 @@ fn one_pair(cards: &Vec<Card>) -> Option<(i32, CardValue, CardValue)> {
         if v == 2 {
             found_one += 1;
             one_pair_value = k;
+        } else if k > high_card {
+            high_card = k;
         }
     }
 
     if one_pair_value == CardValue::None || high_card == CardValue::None {
-        panic!("Expected these to not be none: {:?} {:?}", one_pair_value, high_card);
-    }
-    else if found_one == 1 {
+        None
+    } else if found_one == 1 {
         Some((2, one_pair_value, high_card))
     } else {
         None
@@ -459,6 +570,29 @@ fn test_one_pair() {
     assert_eq!(
         one_pair(&Hand::new(&vec!["2D", "2C", "2H", "3C", "9H"]).cards),
         None
+    );
+}
+
+// One Pair: Two cards of the same value.
+fn high_card(cards: &Vec<Card>) -> Option<(i32, CardValue)> {
+    let mut high_card: CardValue = CardValue::None;
+    for card in cards {
+        if card.value > high_card {
+            high_card = card.value;
+        }
+    }
+    if high_card == CardValue::None {
+        panic!("Expected these to not be none: {:?} ", high_card);
+    } else {
+        Some((1, high_card))
+    }
+}
+
+#[test]
+fn test_high_card() {
+    assert_eq!(
+        high_card(&Hand::new(&vec!["2D", "3C", "5H", "6D", "8C"]).cards),
+        Some((1, CardValue::Eight))
     );
 }
 
@@ -481,8 +615,6 @@ impl Card {
 pub struct Hand {
     cards: Vec<Card>,
     hand_type: HandType,
-    high_value: Card,
-    high_card: Card,
 }
 
 impl Hand {
@@ -492,21 +624,24 @@ impl Hand {
             .map(|x| Card::new(x))
             .collect::<Vec<Card>>();
         cards.sort_by(|c1, c2| (c1).value.cmp(&c2.value));
-        let (hand_type, high_value, high_card) = HandType::new(cards)
+        let hand_type = HandType::new(cards.clone());
+
         Self {
-            cards: cards.clone(),
+            cards: cards,
             hand_type: hand_type,
-            high_value: high_value,
-            high_card: high_card,
         }
     }
 }
 
 fn compare(p1: Hand, p2: Hand) -> Option<Winner> {
-    println!("0000000000000000000000000000000000000000");
+    println!("1111111111111111111111111111111111111111");
     println!("Compairing {:?} to {:?}", p1.hand_type, p2.hand_type);
 
-    None
+    match p1.hand_type.cmp(&p2.hand_type) {
+        Ordering::Greater => Some(Winner::P1),
+        Ordering::Less => Some(Winner::P2),
+        Ordering::Equal => None,
+    }
 }
 
 #[derive(PartialEq, Eq)]
@@ -530,7 +665,7 @@ fn pe054() -> u64 {
     for (idx, line) in lines.iter().enumerate() {
         let raw_cards = line.split(' ').collect::<Vec<&str>>();
         let (p1, p2) = (Hand::new(&raw_cards[..5]), Hand::new(&raw_cards[5..]));
-        println!("11111111111111111111111111111111111111");
+        println!("00000000000000000000000000000000000000");
         dbg!(&p1);
         dbg!(&p2);
         match compare(p1, p2) {
@@ -539,9 +674,9 @@ fn pe054() -> u64 {
             None => unreachable!("Couldn't deduce winner"),
         }
 
-        if idx == 5 {
-            break;
-        }
+        // if idx == 5 {
+        //     break;
+        // }
     }
     p1_wins
 }
