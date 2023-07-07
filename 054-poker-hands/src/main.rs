@@ -409,17 +409,102 @@ fn compare(p1: Hand, p2: Hand) -> Winner {
     println!("Compairing {:?} to {:?}", p1.hand_type, p2.hand_type);
 
     match p1.hand_type.cmp(&p2.hand_type) {
-        Ordering::Less => {
-            println!("BBBBBBBBBBBBBBBBBBBBBBBBB");
-            Winner::P2
-        }
         Ordering::Greater => {
             println!("AAAAAAAAAAAAAAAAAAAAAAAAA");
             Winner::P1
         }
+        Ordering::Less => {
+            println!("BBBBBBBBBBBBBBBBBBBBBBBBB");
+            Winner::P2
+        }
         Ordering::Equal => {
             println!("CCCCCCCCCCCCCCCCCCCCCCCCC");
-            Winner::P1
+            match p1.hand_type {
+                HandType::RoyalFlush => panic!("Not sure what to do with RoyalFlush"),
+                HandType::StraightFlush => panic!("Not sure what to do with StraightFlush"),
+                HandType::Straight => panic!("Not sure what to do with Straight"),
+                HandType::Flush => panic!("Not sure what to do with StraightFlush"),
+                HandType::FourOfAKind => panic!("Not sure what to do with FourOfAKind"),
+                HandType::FullHouse => panic!("Not sure what to do with FullHouse"),
+                HandType::ThreeOfAKind => {
+                    let mut hm: HashMap<CardValue, i32> = HashMap::new();
+                    for card in p1.cards {
+                        let count = hm.entry(card.value).or_insert(0);
+                        *count += 1
+                    }
+                    let mut p1_pair_value = CardValue::Two;
+                    for (k, v) in hm.clone() {
+                        println!("Comparing p1 {:?}", hm.clone());
+                        if v == 3 {
+                            p1_pair_value = k;
+                            break;
+                        }
+                    }
+                    let mut hm: HashMap<CardValue, i32> = HashMap::new();
+                    for card in p2.cards {
+                        let count = hm.entry(card.value).or_insert(0);
+                        *count += 1;
+                    }
+                    let mut p2_pair_value = CardValue::Two;
+                    for (k, v) in hm.clone() {
+                        println!("Comparing p2 {:?}", hm.clone());
+                        if v == 3 {
+                            p2_pair_value = k;
+                            break;
+                        }
+                    }
+                    println!("2222222222222222222222222222222222222222222");
+                    println!("{:?} {:?}", p1_pair_value, p2_pair_value);
+                    match p1_pair_value.cmp(&p2_pair_value) {
+                        Ordering::Greater => Winner::P1,
+                        Ordering::Less => Winner::P2,
+                        Ordering::Equal => panic!("Should never get here"),
+                    }
+                }
+                HandType::TwoPairs => panic!("Not sure what to do with TwoPairs"),
+                HandType::OnePair => {
+                    let mut hm: HashMap<CardValue, i32> = HashMap::new();
+                    for card in p1.cards {
+                        let count = hm.entry(card.value).or_insert(0);
+                        *count += 1
+                    }
+                    let mut p1_pair_value = CardValue::Two;
+                    for (k, v) in hm.clone() {
+                        println!("Comparing p1 {:?}", hm.clone());
+                        if v == 2 {
+                            p1_pair_value = k;
+                            break;
+                        }
+                    }
+                    let mut hm: HashMap<CardValue, i32> = HashMap::new();
+                    for card in p2.cards {
+                        let count = hm.entry(card.value).or_insert(0);
+                        *count += 1;
+                    }
+                    let mut p2_pair_value = CardValue::Two;
+                    for (k, v) in hm.clone() {
+                        println!("Comparing p2 {:?}", hm.clone());
+                        if v == 2 {
+                            p2_pair_value = k;
+                            break;
+                        }
+                    }
+                    println!("2222222222222222222222222222222222222222222");
+                    println!("{:?} {:?}", p1_pair_value, p2_pair_value);
+                    match p1_pair_value.cmp(&p2_pair_value) {
+                        Ordering::Greater => Winner::P1,
+                        Ordering::Less => Winner::P2,
+                        Ordering::Equal => panic!("Should never get here"),
+                    }
+                }
+                HandType::HighCard => {
+                    if p1.cards[4] > p2.cards[4] {
+                        Winner::P1
+                    } else {
+                        Winner::P2
+                    }
+                }
+            }
         }
     }
 }
@@ -453,7 +538,7 @@ fn pe054() -> u64 {
             Winner::P2 => _p2_wins += 1,
         }
 
-        if idx == 5 {
+        if idx == 50 {
             break;
         }
     }
