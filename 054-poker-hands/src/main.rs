@@ -597,7 +597,7 @@ fn test_high_card() {
 }
 
 #[derive(Debug, Hash, Clone, Ord, Eq, PartialEq, PartialOrd)]
-struct Card {
+pub struct Card {
     suit: Suit,
     value: CardValue,
 }
@@ -613,7 +613,7 @@ impl Card {
 
 #[derive(Debug)]
 pub struct Hand {
-    cards: Vec<Card>,
+    pub cards: Vec<Card>,
     hand_type: HandType,
 }
 
@@ -626,17 +626,11 @@ impl Hand {
         cards.sort_by(|c1, c2| (c1).value.cmp(&c2.value));
         let hand_type = HandType::new(cards.clone());
 
-        Self {
-            cards: cards,
-            hand_type: hand_type,
-        }
+        Self { cards, hand_type }
     }
 }
 
 fn compare(p1: Hand, p2: Hand) -> Option<Winner> {
-    println!("1111111111111111111111111111111111111111");
-    println!("Compairing {:?} to {:?}", p1.hand_type, p2.hand_type);
-
     match p1.hand_type.cmp(&p2.hand_type) {
         Ordering::Greater => Some(Winner::P1),
         Ordering::Less => Some(Winner::P2),
@@ -662,21 +656,14 @@ fn pe054() -> u64 {
     }
     let mut p1_wins = 0;
     let mut _p2_wins = 0;
-    for (idx, line) in lines.iter().enumerate() {
+    for line in lines.iter() {
         let raw_cards = line.split(' ').collect::<Vec<&str>>();
         let (p1, p2) = (Hand::new(&raw_cards[..5]), Hand::new(&raw_cards[5..]));
-        println!("00000000000000000000000000000000000000");
-        dbg!(&p1);
-        dbg!(&p2);
         match compare(p1, p2) {
             Some(Winner::P1) => p1_wins += 1,
             Some(Winner::P2) => _p2_wins += 1,
             None => unreachable!("Couldn't deduce winner"),
         }
-
-        // if idx == 5 {
-        //     break;
-        // }
     }
     p1_wins
 }
