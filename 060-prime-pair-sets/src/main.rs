@@ -6,6 +6,14 @@
 //
 // Find the lowest sum for a set of five primes for which any two primes
 // concatenate to produce another prime.
+//
+// NOTE: Two observations:
+// 1 -> I am checking and rechecking a lot of possible concatenated primes multiple
+//      multiple times. I should probably be looking up in some cache table or,
+//      even better, just iterating over the ones I already know are invalid.
+// 2 -> It might be a better approach to start counting primes and destructuring
+//      them. But that doesn't tell me about all the numbers. If I destructure
+//      7109 and deduce 7 and 109, that tells me nothing about 3 and 673
 
 use itertools::Itertools;
 use primes::{is_prime, PrimeSet, Sieve};
@@ -33,30 +41,74 @@ fn test_perms_are_prime() {
 }
 
 fn pe060() -> u64 {
-    let mut lowest = 1_000_000_000_000u64;
-    'loop1: for (p1_idx, p1) in Sieve::new().iter().skip(1).enumerate() {
-        for (p2_idx, p2) in Sieve::new().iter().skip(p1_idx + 2).enumerate() {
-            for (p3_idx, p3) in Sieve::new().iter().skip(p2_idx + 3).enumerate() {
-                for (p4_idx, p4) in Sieve::new().iter().skip(p3_idx + 4).enumerate() {
-                    for p5 in Sieve::new().iter().skip(p4_idx + 5) {
-                        let candidates = vec![p1, p2, p3, p4, p5];
-                        println!("Checking: {:?}", candidates);
-                        if !perms_are_prime(&candidates) {
-                            continue;
+    let mut p5_idx = 109;
+    let mut p4_idx = 4;
+    let mut p3_idx = 3;
+    let mut p2_idx = 2;
+    let mut p1_idx = 1;
+    let sieve = Sieve::new().iter().take(1_000_000).collect::<Vec<_>>();
+
+    let mut count = 0;
+
+    'mainloop: loop {
+        p5_idx += 1;
+        count += 1;
+
+        for p4_idx in p4_idx..p5_idx {
+            for p3_idx in p3_idx..p4_idx {
+                for p2_idx in p2_idx..p3_idx {
+                    for p1_idx in p1_idx..p2_idx {
+                        if count % 10 == 0 {
+                            println!(
+                                "{} {} {} {} {}",
+                                sieve[p1_idx],
+                                sieve[p2_idx],
+                                sieve[p3_idx],
+                                sieve[p4_idx],
+                                sieve[p5_idx],
+                            );
                         }
+                        let candidates = vec![
+                            sieve[p1_idx],
+                            sieve[p2_idx],
+                            sieve[p3_idx],
+                            sieve[p4_idx],
+                            sieve[p5_idx],
+                        ];
+                        if perms_are_prime(&candidates) {
+                            println!("Found one: {:?}", candidates);
 
-                        let sum = candidates.iter().sum();
-
-                        if sum < lowest {
-                            println!("Found one: {sum}");
-                            lowest = sum;
-                            break;
+                            break 'mainloop;
                         }
                     }
                 }
             }
         }
     }
+
+    // 'loop1: for (p1_idx, p1) in Sieve::new().iter().skip(1).enumerate() {
+    //     for (p2_idx, p2) in Sieve::new().iter().skip(p1_idx + 2).enumerate() {
+    //         for (p3_idx, p3) in Sieve::new().iter().skip(p2_idx + 3).enumerate() {
+    //             for (p4_idx, p4) in Sieve::new().iter().skip(p3_idx + 4).enumerate() {
+    //                 for p5 in Sieve::new().iter().skip(p4_idx + 5) {
+    //                     let candidates = vec![p1, p2, p3, p4, p5];
+    //                     println!("Checking: {:?}", candidates);
+    //                     if !perms_are_prime(&candidates) {
+    //                         continue;
+    //                     }
+    //
+    //                     let sum = candidates.iter().sum();
+    //
+    //                     if sum < lowest {
+    //                         println!("Found one: {sum}");
+    //                         lowest = sum;
+    //                         break;
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
     0
 }
 
