@@ -52,75 +52,58 @@ fn test_concats_to_prime() {
 }
 
 fn prime_pair_sets(len: u32) -> Vec<u64> {
-    let mut min = 1_000_000;
+    let mut min: Option<u64> = None;
     let mut min_vec: Vec<u64> = vec![];
-    let mut hm: HashMap<u64, HashSet<u64>> = HashMap::new();
-    'bigloop: for (idx, prime1) in Sieve::new().iter().enumerate() {
-        if idx % 25 == 0 {
-            println!("Working on idx {idx}: {prime1}");
-        }
-        for prime2 in Sieve::new().iter().take(idx) {
-            if concats_to_prime(prime1.clone(), prime2.clone()) {
-                let entry = &mut hm.entry(prime1.clone()).or_insert(HashSet::from([prime1]));
-                entry.insert(prime2.clone());
-                let entry = &mut hm.entry(prime2.clone()).or_insert(HashSet::from([prime2]));
-                entry.insert(prime1.clone());
+    let mut prime_vec = Sieve::new().iter().take(300).collect_vec();
+    // Do in an increasing order of permutations: perms(2), perms(3), etc, whittle down
+    'loopy: for perm in prime_vec.iter().combinations(len as usize) {
+        for perm2 in perm.clone().iter().permutations(2) {
+            if !concats_to_prime(**perm2[0], **perm2[1]) {
+                continue 'loopy;
             }
         }
-        'forloop: for (k, v) in &hm {
-            if v.len() < len as usize {
-                continue;
-            }
-            'loopfoo: for perm in v.iter().permutations(len as usize) {
-                for perm2 in perm.iter().permutations(2) {
-                    if &hm
-                        .get(perm2[0])
-                        .unwrap()
-                        .intersection(hm.get(perm2[1]).unwrap())
-                        .into_iter()
-                        .collect::<Vec<_>>()
-                        .len()
-                        < &(len as usize)
-                    {
-                        continue 'loopfoo;
+        // println!("Perm2 to primes: {:?}", perm2);
+        let mut perm_sum = 0;
+        for x in perm.clone() {
+            perm_sum += x;
+        }
+        // println!("Perm2 to sum: {}", perm_sum);
+        match min {
+            Some(x) => {
+                if perm_sum < x {
+                    println!("This one is less: {} {perm_sum} for {:?}", min.unwrap(), perm);
+                    min = Some(perm_sum);
+                    min_vec = vec![];
+                    for p in &perm {
+                        min_vec.push(**p);
                     }
-                }
-                let mut sum = 0;
-                for foo in &perm {
-                    sum += *foo;
-                }
-                if sum < min {
-                    println!("5555555555555555555555555555555555555555555");
-                    println!("Maybe found one? {:?} {sum} {min}", perm);
-                    min = sum;
-                    let mut foo: Vec<u64> = vec![];
-                    for x in perm.iter() {
-                        foo.push(**x);
-                    }
-                    foo.sort();
-                    min_vec = foo;
                     min_vec.sort();
                 }
             }
+            None => {
+                println!("Initializing: {} for {:?}", perm_sum, perm);
+                min = Some(perm_sum);
+                min_vec = vec![];
+                for p in &perm {
+                    min_vec.push(**p);
+                }
+                min_vec.sort();
+            }
         }
-        // if min_vec.len() > 0 && prime1 > min_vec[min_vec.len() - 1] {
-        //     return min_vec;
-        // }
     }
-    dbg!(hm);
-    vec![]
+
+    min_vec
 }
 
 #[test]
 fn test_prime_pair_sets() {
     assert_eq!(prime_pair_sets(2), vec![3, 7]);
     assert_eq!(prime_pair_sets(3), vec![3, 37, 67]);
-    // assert_eq!(prime_pair_sets(4), vec![3, 7, 109, 673]);
+    assert_eq!(prime_pair_sets(4), vec![3, 7, 109, 673]);
 }
 
 fn pe060() -> u64 {
-    prime_pair_sets(5);
-    0
+    prime_pair_sets(3).iter().sum()
 }
 
 fn main() {
