@@ -17,98 +17,119 @@
 
 use itertools::Itertools;
 use primes::{is_prime, PrimeSet, Sieve};
+use std::collections::{HashMap, HashSet};
 
-fn perms_are_prime(primes: &Vec<u64>) -> bool {
-    primes
-        .iter()
-        .permutations(2)
-        .map(|x| {
-            x.iter()
-                .map(|y| y.to_string())
-                .collect::<String>()
-                .parse()
-                .unwrap()
-        })
-        .collect::<Vec<u64>>()
-        .iter()
-        .all(|z| is_prime(*z))
+fn concats_to_prime(prime1: u64, prime2: u64) -> bool {
+    is_prime(
+        [prime1, prime2]
+            .iter()
+            .map(|x| x.to_string())
+            .collect::<String>()
+            .parse()
+            .unwrap(),
+    ) && is_prime(
+        [prime2, prime1]
+            .iter()
+            .map(|x| x.to_string())
+            .collect::<String>()
+            .parse()
+            .unwrap(),
+    )
 }
 
 #[test]
-fn test_perms_are_prime() {
-    assert!(perms_are_prime(&vec![3, 7, 109, 673]));
-    assert!(!perms_are_prime(&vec![2, 7, 109, 673]));
+fn test_concats_to_prime() {
+    assert!(concats_to_prime(3, 7));
+    assert!(concats_to_prime(3, 137));
+    assert!(!concats_to_prime(7, 137));
+    assert!(concats_to_prime(3, 229));
+    assert!(concats_to_prime(7, 229));
+    assert!(!concats_to_prime(137, 229));
 }
 
-fn pe060() -> u64 {
-    let mut p5_idx = 109;
-    let mut p4_idx = 4;
-    let mut p3_idx = 3;
-    let mut p2_idx = 2;
-    let mut p1_idx = 1;
-    let sieve = Sieve::new().iter().take(1_000_000).collect::<Vec<_>>();
+fn prime_pair_sets(len: u32) -> Vec<u32> {
+    let mut min = 1_000_000;
+    let mut hm: HashMap<u64, HashSet<u64>> = HashMap::new();
+    'bigloop: for (idx, prime1) in Sieve::new().iter().enumerate() {
+        if prime1 > 674 {
+            break;
+        }
+        for prime2 in Sieve::new().iter().take(idx) {
+            if concats_to_prime(prime1.clone(), prime2.clone()) {
+                let entry = &mut hm.entry(prime1.clone()).or_insert(HashSet::from([prime1]));
+                entry.insert(prime2.clone());
+                let entry = &mut hm.entry(prime2.clone()).or_insert(HashSet::from([prime2]));
+                entry.insert(prime1.clone());
+            }
+        }
+        'forloop: for (k, v) in &hm {
+            let mut found_one = false;
+            for perm in v.iter().permutations(len as usize) {
+                // println!("222222222222222222222222222222222222222222");
+                // println!("{:?}", perm);
+                let perm_copy = perm.clone();
+                if &hm
+                    .get(perm[0])
+                    .unwrap()
+                    .intersection(hm.get(perm[1]).unwrap())
+                    .into_iter()
+                    .collect::<Vec<_>>()
+                    .len()
+                    >= &4
+                    && &hm
+                        .get(perm[0])
+                        .unwrap()
+                        .intersection(hm.get(perm[2]).unwrap())
+                        .into_iter()
+                        .collect::<Vec<_>>()
+                        .len()
+                        >= &4
+                    && &hm
+                        .get(perm[0])
+                        .unwrap()
+                        .intersection(hm.get(perm[3]).unwrap())
+                        .into_iter()
+                        .collect::<Vec<_>>()
+                        .len()
+                        >= &4
+                // && &hm
+                //     .get(perm[0])
+                //     .unwrap()
+                //     .intersection(hm.get(perm[4]).unwrap())
+                //     .into_iter()
+                //     .collect::<Vec<_>>()
+                //     .len()
+                //     >= &5
+                {
+                    found_one = true;
+                    let mut s = 0;
+                    for x in perm_copy {
+                        s += x;
+                    }
 
-    let mut count = 0;
-
-    'mainloop: loop {
-        p5_idx += 1;
-        count += 1;
-
-        for p4_idx in p4_idx..p5_idx {
-            for p3_idx in p3_idx..p4_idx {
-                for p2_idx in p2_idx..p3_idx {
-                    for p1_idx in p1_idx..p2_idx {
-                        if count % 10 == 0 {
-                            println!(
-                                "{} {} {} {} {}",
-                                sieve[p1_idx],
-                                sieve[p2_idx],
-                                sieve[p3_idx],
-                                sieve[p4_idx],
-                                sieve[p5_idx],
-                            );
-                        }
-                        let candidates = vec![
-                            sieve[p1_idx],
-                            sieve[p2_idx],
-                            sieve[p3_idx],
-                            sieve[p4_idx],
-                            sieve[p5_idx],
-                        ];
-                        if perms_are_prime(&candidates) {
-                            println!("Found one: {:?}", candidates);
-
-                            break 'mainloop;
-                        }
+                    if s < min {
+                        println!("0000000000000000000000000000000000000000000");
+                        println!("Found one for {k}:\n{:?} {min}", perm);
+                        min = s;
                     }
                 }
             }
+            // if found_one {
+            //     break 'bigloop;
+            // }
         }
     }
+    // println!("{:?}", hm);
+    vec![]
+}
 
-    // 'loop1: for (p1_idx, p1) in Sieve::new().iter().skip(1).enumerate() {
-    //     for (p2_idx, p2) in Sieve::new().iter().skip(p1_idx + 2).enumerate() {
-    //         for (p3_idx, p3) in Sieve::new().iter().skip(p2_idx + 3).enumerate() {
-    //             for (p4_idx, p4) in Sieve::new().iter().skip(p3_idx + 4).enumerate() {
-    //                 for p5 in Sieve::new().iter().skip(p4_idx + 5) {
-    //                     let candidates = vec![p1, p2, p3, p4, p5];
-    //                     println!("Checking: {:?}", candidates);
-    //                     if !perms_are_prime(&candidates) {
-    //                         continue;
-    //                     }
-    //
-    //                     let sum = candidates.iter().sum();
-    //
-    //                     if sum < lowest {
-    //                         println!("Found one: {sum}");
-    //                         lowest = sum;
-    //                         break;
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
+#[test]
+fn test_prime_pair_sets() {
+    assert_eq!(prime_pair_sets(4), vec![3, 7, 109, 673]);
+}
+
+fn pe060() -> u64 {
+    prime_pair_sets(4);
     0
 }
 
