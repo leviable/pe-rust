@@ -14,27 +14,28 @@
 // 2 -> It might be a better approach to start counting primes and destructuring
 //      them. But that doesn't tell me about all the numbers. If I destructure
 //      7109 and deduce 7 and 109, that tells me nothing about 3 and 673
+// 3 -> Maybe it would be best to do all the associations at once for some given
+//      range, and then try and filter down?
 
 use itertools::Itertools;
 use primes::{is_prime, PrimeSet, Sieve};
 use std::collections::{HashMap, HashSet};
 
 fn concats_to_prime(prime1: u64, prime2: u64) -> bool {
-    is_prime(
-        [prime1, prime2]
-            .iter()
-            .map(|x| x.to_string())
-            .collect::<String>()
-            .parse()
-            .unwrap(),
-    ) && is_prime(
-        [prime2, prime1]
-            .iter()
-            .map(|x| x.to_string())
-            .collect::<String>()
-            .parse()
-            .unwrap(),
-    )
+    let p1 = [prime1, prime2]
+        .iter()
+        .map(|x| x.to_string())
+        .collect::<String>()
+        .parse()
+        .unwrap();
+    let p2 = [prime2, prime1]
+        .iter()
+        .map(|x| x.to_string())
+        .collect::<String>()
+        .parse()
+        .unwrap();
+
+    return is_prime(p1) && is_prime(p2);
 }
 
 #[test]
@@ -45,14 +46,18 @@ fn test_concats_to_prime() {
     assert!(concats_to_prime(3, 229));
     assert!(concats_to_prime(7, 229));
     assert!(!concats_to_prime(137, 229));
+    assert!(!concats_to_prime(3, 19));
+    assert!(!concats_to_prime(2, 19));
+    assert!(!concats_to_prime(2, 2));
 }
 
-fn prime_pair_sets(len: u32) -> Vec<u32> {
+fn prime_pair_sets(len: u32) -> Vec<u64> {
     let mut min = 1_000_000;
+    let mut min_vec: Vec<u64> = vec![];
     let mut hm: HashMap<u64, HashSet<u64>> = HashMap::new();
     'bigloop: for (idx, prime1) in Sieve::new().iter().enumerate() {
-        if prime1 > 674 {
-            break;
+        if idx % 25 == 0 {
+            println!("Working on idx {idx}: {prime1}");
         }
         for prime2 in Sieve::new().iter().take(idx) {
             if concats_to_prime(prime1.clone(), prime2.clone()) {
@@ -66,75 +71,55 @@ fn prime_pair_sets(len: u32) -> Vec<u32> {
             if v.len() < len as usize {
                 continue;
             }
-            let mut found_one = false;
-            for perm in v.iter().permutations(len as usize) {
-                // println!("222222222222222222222222222222222222222222");
-                // println!("{:?}", perm);
-                let perm_copy = perm.clone();
-                if &hm
-                    .get(perm[0])
-                    .unwrap()
-                    .intersection(hm.get(perm[1]).unwrap())
-                    .into_iter()
-                    .collect::<Vec<_>>()
-                    .len()
-                    >= &4
-                    && &hm
-                        .get(perm[0])
+            'loopfoo: for perm in v.iter().permutations(len as usize) {
+                for perm2 in perm.iter().permutations(2) {
+                    if &hm
+                        .get(perm2[0])
                         .unwrap()
-                        .intersection(hm.get(perm[2]).unwrap())
+                        .intersection(hm.get(perm2[1]).unwrap())
                         .into_iter()
                         .collect::<Vec<_>>()
                         .len()
-                        >= &4
-                    && &hm
-                        .get(perm[0])
-                        .unwrap()
-                        .intersection(hm.get(perm[3]).unwrap())
-                        .into_iter()
-                        .collect::<Vec<_>>()
-                        .len()
-                        >= &4
-                // && &hm
-                //     .get(perm[0])
-                //     .unwrap()
-                //     .intersection(hm.get(perm[4]).unwrap())
-                //     .into_iter()
-                //     .collect::<Vec<_>>()
-                //     .len()
-                //     >= &5
-                {
-                    found_one = true;
-                    let mut s = 0;
-                    for x in perm_copy {
-                        s += x;
-                    }
-
-                    if s < min {
-                        println!("0000000000000000000000000000000000000000000");
-                        println!("Found one for {k}:\n{:?} {min}", perm);
-                        println!("1111111111111111111111111111111111111111111");
-                        println!("{:?}", &hm.get(k));
-                        min = s;
+                        < &(len as usize)
+                    {
+                        continue 'loopfoo;
                     }
                 }
+                let mut sum = 0;
+                for foo in &perm {
+                    sum += *foo;
+                }
+                if sum < min {
+                    println!("5555555555555555555555555555555555555555555");
+                    println!("Maybe found one? {:?} {sum} {min}", perm);
+                    min = sum;
+                    let mut foo: Vec<u64> = vec![];
+                    for x in perm.iter() {
+                        foo.push(**x);
+                    }
+                    foo.sort();
+                    min_vec = foo;
+                    min_vec.sort();
+                }
             }
-            // if found_one {
-            //     break 'bigloop;
-            // }
         }
+        // if min_vec.len() > 0 && prime1 > min_vec[min_vec.len() - 1] {
+        //     return min_vec;
+        // }
     }
-    // println!("{:?}", hm);
+    dbg!(hm);
     vec![]
 }
 
 #[test]
 fn test_prime_pair_sets() {
-    assert_eq!(prime_pair_sets(4), vec![3, 7, 109, 673]);
+    assert_eq!(prime_pair_sets(2), vec![3, 7]);
+    assert_eq!(prime_pair_sets(3), vec![3, 37, 67]);
+    // assert_eq!(prime_pair_sets(4), vec![3, 7, 109, 673]);
 }
 
 fn pe060() -> u64 {
-    prime_pair_sets(4);
+    prime_pair_sets(5);
     0
 }
 
