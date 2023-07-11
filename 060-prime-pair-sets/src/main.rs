@@ -63,6 +63,9 @@ fn prime_pair_sets(len: u32) -> Vec<u32> {
             }
         }
         'forloop: for (k, v) in &hm {
+            if v.len() < len as usize {
+                continue;
+            }
             let mut found_one = false;
             for perm in v.iter().permutations(len as usize) {
                 // println!("222222222222222222222222222222222222222222");
@@ -110,6 +113,8 @@ fn prime_pair_sets(len: u32) -> Vec<u32> {
                     if s < min {
                         println!("0000000000000000000000000000000000000000000");
                         println!("Found one for {k}:\n{:?} {min}", perm);
+                        println!("1111111111111111111111111111111111111111111");
+                        println!("{:?}", &hm.get(k));
                         min = s;
                     }
                 }
