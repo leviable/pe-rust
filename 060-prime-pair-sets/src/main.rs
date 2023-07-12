@@ -51,59 +51,80 @@ fn test_concats_to_prime() {
     assert!(!concats_to_prime(2, 2));
 }
 
-fn prime_pair_sets(len: u32) -> Vec<u64> {
-    let mut min: Option<u64> = None;
-    let mut min_vec: Vec<u64> = vec![];
-    let mut prime_vec = Sieve::new().iter().take(300).collect_vec();
-    // Do in an increasing order of permutations: perms(2), perms(3), etc, whittle down
-    'loopy: for perm in prime_vec.iter().combinations(len as usize) {
-        for perm2 in perm.clone().iter().permutations(2) {
-            if !concats_to_prime(**perm2[0], **perm2[1]) {
-                continue 'loopy;
-            }
-        }
-        // println!("Perm2 to primes: {:?}", perm2);
-        let mut perm_sum = 0;
-        for x in perm.clone() {
-            perm_sum += x;
-        }
-        // println!("Perm2 to sum: {}", perm_sum);
-        match min {
-            Some(x) => {
-                if perm_sum < x {
-                    println!("This one is less: {} {perm_sum} for {:?}", min.unwrap(), perm);
-                    min = Some(perm_sum);
-                    min_vec = vec![];
-                    for p in &perm {
-                        min_vec.push(**p);
-                    }
-                    min_vec.sort();
-                }
-            }
-            None => {
-                println!("Initializing: {} for {:?}", perm_sum, perm);
-                min = Some(perm_sum);
-                min_vec = vec![];
-                for p in &perm {
-                    min_vec.push(**p);
-                }
-                min_vec.sort();
-            }
+fn all_prime(candidates: Vec<&u64>) -> bool {
+    for combo in candidates.iter().combinations(2) {
+        if !concats_to_prime(**combo[0], **combo[1]) {
+            return false;
         }
     }
+    true
+}
 
-    min_vec
+#[test]
+fn test_all_prime() {
+    assert!(all_prime(vec![&3, &7]));
+    assert!(all_prime(vec![&3, &37, &67]));
+    assert!(all_prime(vec![&3, &7, &109, &673]));
+    assert!(!all_prime(vec![&3, &77, &109, &673]));
+}
+
+fn prime_pair_sets(prime_vec: Vec<u64>, level: u64, limit: u64) -> Vec<u64> {
+    // Whittle down by combination level
+    let mut new_prime_set: HashSet<u64> = HashSet::new();
+
+    for combo in prime_vec
+        .iter()
+        .combinations(level as usize)
+        .filter(|y| all_prime(y.clone()))
+    {
+        new_prime_set.extend(combo);
+    }
+
+    println!("555555555555555555555555555555555555555555555555555");
+    println!("new_prime_set: {:?}", new_prime_set);
+
+    if level == limit {
+        println!("999999999999999999999999999999999999999999999999");
+        println!(
+            "Prime set: {:?}",
+            new_prime_set.clone().iter().sorted().collect::<Vec<_>>()
+        );
+        let mut min = 1_000_000;
+        let mut min_vec = vec![];
+        for prime_combo in new_prime_set.iter().sorted().combinations(level as usize) {
+            let new_sum = prime_combo.iter().map(|x| **x).sum();
+            if new_sum < min {
+                println!("8888888888888888888888888888888888888888888");
+                println!("New min: {min} {new_sum} {:?}", prime_combo.clone());
+                min = new_sum;
+                min_vec = prime_combo.clone();
+            }
+        }
+        return min_vec.iter().map(|x| **x).collect();
+    } else {
+        println!("7777777777777777777777777777777777777777777777777777");
+        return prime_pair_sets(
+            new_prime_set.into_iter().sorted().collect(),
+            level + 1,
+            limit,
+        );
+    }
 }
 
 #[test]
 fn test_prime_pair_sets() {
-    assert_eq!(prime_pair_sets(2), vec![3, 7]);
-    assert_eq!(prime_pair_sets(3), vec![3, 37, 67]);
-    assert_eq!(prime_pair_sets(4), vec![3, 7, 109, 673]);
+    let prime_vec = Sieve::new().iter().take(300).collect_vec();
+    assert_eq!(prime_pair_sets(prime_vec.clone(), 2, 2), vec![3, 7]);
+    assert_eq!(prime_pair_sets(prime_vec.clone(), 2, 3), vec![3, 37, 67]);
+    assert_eq!(
+        prime_pair_sets(prime_vec.clone(), 2, 4),
+        vec![3, 7, 109, 673]
+    );
 }
 
 fn pe060() -> u64 {
-    prime_pair_sets(3).iter().sum()
+    let prime_vec = Sieve::new().iter().take(300).collect_vec();
+    prime_pair_sets(prime_vec, 2, 5).iter().sum()
 }
 
 fn main() {
