@@ -19,7 +19,7 @@
 
 use itertools::Itertools;
 use primes::{is_prime, PrimeSet, Sieve};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 fn concats_to_prime(prime1: u64, prime2: u64) -> bool {
     let p1 = [prime1, prime2]
@@ -52,16 +52,10 @@ fn test_concats_to_prime() {
 }
 
 fn all_prime(candidates: &[u64]) -> bool {
-    // candidates
-    //     .iter()
-    //     .combinations(2)
-    //     .all(|x| concats_to_prime(*x[0], *x[1]))
-    for combo in candidates.iter().combinations(2) {
-        if !concats_to_prime(*combo[0], *combo[1]) {
-            return false;
-        }
-    }
-    true
+    candidates
+        .iter()
+        .combinations(2)
+        .all(|x| concats_to_prime(*x[0], *x[1]))
 }
 
 #[test]
@@ -74,62 +68,72 @@ fn test_all_prime() {
     assert!(!all_prime(&vec![3, 7, 13]));
 }
 
-fn prime_pair_sets(primes: HashSet<u64>, level: u64, limit: u64) -> Vec<u64> {
+fn prime_pair_sets(primes: HashSet<u64>, dgts: u64) -> Vec<u64> {
+    // NOTE:
+    // next attempt: For every prime under X, add prime + set for all the
+    // other primes that it can all_prime with.
+    // Then do a combo of dgts spots, and see if they all intersect with
+    // dgts number of members
     println!("000000000000000000000000000000000000000000000000000000000000000000");
-    println!("level: {level}");
-    println!("c cnt: {}", &primes.len() + 1);
-    println!("##################################################################");
-    println!("Is 37 in primes: {}", primes.contains(&37));
 
-    let mut new_primes: HashSet<u64> = HashSet::new();
-    for combo in primes.into_iter().combinations(level as usize) {
-        if all_prime(&combo) {
-            new_primes.extend(combo.iter());
+    let mut hm: HashMap<u64, HashSet<u64>> = HashMap::new();
+
+    for (idx, prime) in primes.clone().into_iter().enumerate() {
+        for other in primes.clone().iter() {
+            if concats_to_prime(prime, *other) {
+                let entry = hm.entry(prime).or_insert(HashSet::new());
+                entry.insert(*other);
+            }
         }
     }
 
-    if level == limit {
-        let mut min = 1_000_000_000;
-        let mut min_vec = vec![];
-        for mut candidate in new_primes.into_iter().combinations(level as usize) {
-            if !all_prime(&candidate) {
-                continue;
-            }
-            candidate.sort();
-            // println!("00000000000000000000000000000000000");
-            // println!("Working on: {:?}", candidate);
-
-            let sum = candidate.clone().iter().sum();
-            if sum < min {
-                println!("11111111111111111111111111111111111");
-                println!("New min: {:?} {sum} {min}", candidate.clone());
-                min = sum;
-                min_vec = candidate.clone();
+    for x in 3..6 {
+        println!("Doing combo: {x}");
+        'combo: for combo in hm.clone().keys().combinations(x) {
+            for smaller_combo in combo.iter().combinations(2) {
+                if !hm.contains_key(smaller_combo[0]) || !hm.contains_key(smaller_combo[1]) {
+                    continue 'combo;
+                }
+                let inter = hm[smaller_combo[0]]
+                    .intersection(&hm[smaller_combo[1]])
+                    .collect::<Vec<_>>();
+                if inter.len() == 0 {
+                    continue;
+                }
+                if inter.len() < 4 {
+                    println!("5555555555555555555555555555555555555555555555555");
+                    println!("{:?}", inter);
+                    hm.remove(smaller_combo[0]);
+                    continue 'combo;
+                }
             }
         }
-        min_vec.sort();
-        min_vec
-    } else {
-        prime_pair_sets(new_primes, level + 1, limit)
     }
+
+    for (k, v) in hm.iter() {
+        println!("{k}:\n{:?}", v);
+    }
+
+    println!("111111111111111111111111111111111111111111111111111111111111111111");
+    println!("111111111111111111111111111111111111111111111111111111111111111111");
+    println!("111111111111111111111111111111111111111111111111111111111111111111");
+
+    vec![]
 }
 
 #[test]
 fn test_prime_pair_sets() {
-    let prime_set = HashSet::from_iter(Sieve::new().iter().take(125));
-    assert_eq!(prime_pair_sets(prime_set.clone(), 2, 2), vec![3, 7]);
-    assert_eq!(prime_pair_sets(prime_set.clone(), 2, 3), vec![3, 37, 67]);
-    assert_eq!(
-        prime_pair_sets(prime_set.clone(), 2, 4),
-        vec![3, 7, 109, 673]
-    );
+    // let prime_set = HashSet::from_iter(Sieve::new().iter().take(125));
+    // assert_eq!(prime_pair_sets(prime_set.clone(), 2), vec![3, 7]);
+    // assert_eq!(prime_pair_sets(prime_set.clone(), 3), vec![3, 37, 67]);
+    // assert_eq!(prime_pair_sets(prime_set.clone(), 4), vec![3, 7, 109, 673]);
 }
 
 fn pe060() -> u64 {
-    let count = 5000;
-    let level = 5;
+    let count = 500;
+    let dgts = 5;
     let prime_set = HashSet::from_iter(Sieve::new().iter().take(count));
-    prime_pair_sets(prime_set, 2, level).iter().sum()
+    prime_pair_sets(prime_set, dgts).iter().sum()
 }
 
 fn main() {
