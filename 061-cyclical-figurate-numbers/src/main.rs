@@ -37,8 +37,50 @@ fn get_nums(f: fn(u64) -> u64) -> Vec<u64> {
         .collect::<Vec<_>>()
 }
 
-fn find_loop(permutation: Vec<&u64>) -> Option<Vec<u64>> {
-    Some(vec![])
+fn are_cyclic(x: u64, y: u64) -> bool {
+    let x = x / 100;
+    let y = y % 100;
+
+    x == y
+}
+
+fn find_loop(nums: &[Vec<u64>; 6], perms: Vec<&u64>) -> Option<Vec<u64>> {
+    for a in nums.clone()[*perms[0] as usize].clone() {
+        'b: for b in nums.clone()[*perms[1] as usize].clone() {
+            if are_cyclic(a, b) {
+                'c: for c in nums.clone()[*perms[2] as usize].clone() {
+                    if are_cyclic(b, c) {
+                        'd: for d in nums.clone()[*perms[3] as usize].clone() {
+                            if are_cyclic(c, d) {
+                                'e: for e in nums.clone()[*perms[4] as usize].clone() {
+                                    if are_cyclic(d, e) {
+                                        'f: for f in nums.clone()[*perms[5] as usize].clone() {
+                                            if are_cyclic(e, f) {
+                                                if are_cyclic(f, a) {
+                                                    return Some(vec![a, b, c, d, e, f]);
+                                                }
+                                            } else {
+                                                continue 'f;
+                                            }
+                                        }
+                                    } else {
+                                        continue 'e;
+                                    }
+                                }
+                            } else {
+                                continue 'd;
+                            }
+                        }
+                    } else {
+                        continue 'c;
+                    }
+                }
+            } else {
+                continue 'b;
+            }
+        }
+    }
+    None
 }
 
 fn main() {
@@ -51,32 +93,24 @@ fn main() {
     let hep_nums: Vec<u64> = get_nums(|n: u64| -> u64 { n * (5 * n - 3) / 2 });
     let oct_nums: Vec<u64> = get_nums(|n: u64| -> u64 { n * (3 * n - 2) });
 
-    for f in [tri_nums, squ_nums, pen_nums, hex_nums, hep_nums, oct_nums] {
-        println!("{:?}", f);
-    }
+    let nums = [tri_nums, squ_nums, pen_nums, hex_nums, hep_nums, oct_nums];
 
-    // Get every permutation of the 6 types
-    let mut perms = [1u64, 2, 3, 4, 5, 6]
+    let perms = [0u64, 1, 2, 3, 4, 5]
         .iter()
         .permutations(6)
         .collect::<Vec<_>>();
 
-    // for each permutation, copy the first number set to the end, so-as to complete the loop
-    for mut p in &mut perms {
-        p.push(p[0]);
-    }
-
-    // Call a recursive function to do the digit comparisons
-    let mut sol: Vec<u64>;
+    let mut sol: Option<Vec<u64>> = None;
     for perm in perms {
-        sol = match find_loop(perm) {
-            Some(x) => x,
+        sol = match find_loop(&nums, perm) {
+            Some(x) => Some(x),
             None => continue,
         };
         break;
     }
 
     println!("Solution is : {:?}", sol);
+    println!("Solution is : {:?}", sol.unwrap().iter().sum::<u64>());
 
     println!("Time elapsed: {}", start.elapsed().as_secs_f64());
 }
