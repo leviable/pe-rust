@@ -11,15 +11,15 @@
 // NOTE: The first two lines in the file represent the numbers in the example given above.
 
 use std::fs;
-use std::io::{BufRead, BufReader};
+use std::io::BufRead;
 
 #[derive(Debug)]
 struct ScientificNotation {
     position: u64,
     base: f64,
     exp: f64,
-    orig_base: u64,
-    orig_exp: u64,
+    _orig_base: u64,
+    _orig_exp: u64,
 }
 
 impl ScientificNotation {
@@ -33,8 +33,8 @@ impl ScientificNotation {
             position,
             base: m as f64,
             exp: e,
-            orig_base: base,
-            orig_exp: exp,
+            _orig_base: base,
+            _orig_exp: exp,
         }
     }
 }
