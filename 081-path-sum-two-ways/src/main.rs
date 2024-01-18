@@ -13,13 +13,15 @@
 // "Save Link/Target As..."), a 31K text file containing an 80 by 80
 // matrix.
 
+use std::collections::HashMap;
 use std::fs;
-use std::io::{self, BufRead, BufReader};
+use std::io::{BufRead, BufReader};
 
 #[derive(Debug, Clone)]
 struct Matrix {
     data: Vec<Vec<usize>>,
     end: (usize, usize),
+    hmap: HashMap<(usize, usize), Vec<usize>>,
 }
 
 impl Matrix {
@@ -37,48 +39,59 @@ impl Matrix {
 
         let end = (data.len() - 1, data[data.len() - 1].len() - 1);
 
-        Self { data, end }
+        Self {
+            data,
+            end,
+            hmap: HashMap::new(),
+        }
     }
 
     fn cell(self, x: usize, y: usize) -> usize {
         self.data[y][x]
     }
 
-    fn shortest_path(&self, x: usize, y: usize) -> Vec<usize> {
-        if x == 0 && y == 0 {
-            let cell_val = self.clone().cell(x, y);
-            return vec![cell_val];
+    fn shortest_path(&mut self, x: usize, y: usize) -> Vec<usize> {
+        if !self.hmap.contains_key(&(x, y)) {
+            if x == 0 && y == 0 {
+                let cell_val = self.clone().cell(x, y);
+                let to_insert = vec![cell_val];
+                self.hmap.insert((x, y), to_insert);
+            } else if x == 0 {
+                let mut next = self.shortest_path(x, y - 1);
+                next.push(self.clone().cell(x, y));
+                let to_insert = next;
+                self.hmap.insert((x, y), to_insert);
+            } else if y == 0 {
+                let mut next = self.shortest_path(x - 1, y);
+                next.push(self.clone().cell(x, y));
+                let to_insert = next;
+                self.hmap.insert((x, y), to_insert);
+            } else {
+                let mut above = self.shortest_path(x, y.saturating_sub(1));
+                above.push(self.clone().cell(x, y));
+
+                let mut left = self.shortest_path(x.saturating_sub(1), y);
+                left.push(self.clone().cell(x, y));
+
+                let next = match above.iter().sum::<usize>().cmp(&left.iter().sum::<usize>()) {
+                    std::cmp::Ordering::Greater => left,
+                    std::cmp::Ordering::Less => above,
+                    std::cmp::Ordering::Equal => unreachable!("Adjacent cells are never equal"),
+                };
+
+                let to_insert = next;
+                self.hmap.insert((x, y), to_insert);
+            }
         }
 
-        if x == 0 {
-            let mut next = self.shortest_path(x, y - 1);
-            next.push(self.clone().cell(x, y));
-            next
-        } else if y == 0 {
-            let mut next = self.shortest_path(x - 1, y);
-            next.push(self.clone().cell(x, y));
-            next
-        } else {
-            let above = self.clone().cell(x, y.saturating_sub(1));
-            let left = self.clone().cell(x.saturating_sub(1), y);
-
-            let next = match above.cmp(&left) {
-                std::cmp::Ordering::Greater => (x.saturating_sub(1), y),
-                std::cmp::Ordering::Less => (x, y.saturating_sub(1)),
-                std::cmp::Ordering::Equal => unreachable!("Adjacent cells are never equal"),
-            };
-
-            let mut next = self.shortest_path(next.0, next.1);
-
-            next.push(self.clone().cell(x, y));
-            next
-        }
+        let path = self.hmap.get(&(x, y)).unwrap();
+        path.clone()
     }
 }
 
 #[test]
 fn test_shortest_path() {
-    let m = Matrix::load("matrix-example.txt");
+    let mut m = Matrix::load("matrix-example.txt");
     let matrix_end = (4, 4);
     assert_eq!(
         m.shortest_path(matrix_end.0, matrix_end.1),
@@ -87,7 +100,7 @@ fn test_shortest_path() {
 }
 
 fn pe081(matrix_file: &str) -> usize {
-    let matrix = Matrix::load(matrix_file);
+    let mut matrix = Matrix::load(matrix_file);
 
     let binding = matrix.shortest_path(matrix.end.0, matrix.end.1);
     eprintln!("{:?}", binding);
