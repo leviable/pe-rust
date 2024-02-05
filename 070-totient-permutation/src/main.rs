@@ -10,6 +10,9 @@
 //
 // Find the value of , , for which is a permutation of and the
 // ratio produces a minimum.
+use spmc;
+use std::sync::mpsc::{self, Receiver, Sender};
+use std::thread;
 
 pub fn gcd(mut n: u64, mut m: u64) -> u64 {
     assert!(n != 0 && m != 0);
@@ -72,28 +75,46 @@ fn is_perm(n1: u64, n2: u64) -> bool {
 }
 
 fn pe070() -> u64 {
+    let (mut work_tx, work_rx) = spmc::channel();
+    let (result_tx, result_rx): (Sender<(u64, f64)>, Receiver<(u64, f64)>) = mpsc::channel();
+
+    let mut children = Vec::new();
+
     let mut min_fraction = 1_000_000_000f64;
     let mut min_n = 1;
 
-    for n in 2..10_000_000u64 {
-        let coprimes = relative_primes(n);
-        let phi = coprimes.len() as u64;
+    for n in (2..10_000_000u64).rev() {
+        work_tx.send(n).unwrap();
+    }
 
-        if !is_perm(n, phi) {
-            continue;
+    for _ in 1..8 {
+        let rx_clone = work_rx.clone();
+        let tx_clone = result_tx.clone();
+        let child = thread::spawn(move || loop {
+            let n = rx_clone.recv().unwrap();
+
+            let coprimes = relative_primes(n);
+            let phi = coprimes.len() as u64;
+
+            if !is_perm(n, phi) {
+                continue;
+            }
+
+            let frac: f64 = n as f64 / phi as f64;
+
+            tx_clone.send((n, frac)).unwrap();
+        });
+
+        children.push(child);
+    }
+    loop {
+        let (result_n, result_frac) = result_rx.recv().unwrap();
+        if result_frac < min_fraction {
+            min_fraction = result_frac;
+            min_n = result_n;
         }
 
-        let frac: f64 = n as f64 / phi as f64;
-
-        if frac < min_fraction {
-            min_fraction = frac;
-            min_n = n;
-        }
-
-        println!(
-            "Found one: {} -> {} -> {} -> {}",
-            n, phi, min_n, min_fraction
-        );
+        println!("Found one: {} -> {} -> {}", result_n, min_n, min_fraction);
     }
 
     0
