@@ -83,7 +83,7 @@ fn pe070() -> u64 {
     let mut min_fraction = 1_000_000_000f64;
     let mut min_n = 1;
 
-    for n in (2..10_000_000u64).rev() {
+    for n in (2..9_000_000u64).rev() {
         work_tx.send(n).unwrap();
     }
 
